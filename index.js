@@ -1,6 +1,7 @@
 import express from "express";
 const app = express();
 const PORT = process.env.PORT || 10000;
+import fetch from "node-fetch";   // ✅ add this
 
 app.use(express.json());
 
@@ -15,11 +16,62 @@ app.get("/", (_, res) => {
 });
 
 // === CLIENT LOGGING (for Render logs) ===
-app.post("/log", (req, res) => {
-  const { event, detail } = req.body || {};
-  console.log(`🟣 [CLIENT LOG] ${event || "event"}: ${detail || "no details"}`);
-  res.sendStatus(200);
+app.post("/confirm-payment", async (req, res) => {
+  try {
+    const { signature, reference, userId, amount } = req.body;
+    console.log("✅ Received payment confirmation:", {
+      signature,
+      reference,
+      userId,
+      amount,
+    });
+
+    // === Send Telegram confirmation directly ===
+    const token = process.env.BOT_TOKEN;
+    const TELEGRAM_API = `https://api.telegram.org/bot${token}/sendMessage`;
+
+    // DM the user who paid
+    if (userId) {
+      const dm = await fetch(TELEGRAM_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: userId,
+          text: "✅ Payment confirmed — your track is officially entered!",
+        }),
+      });
+
+      if (!dm.ok) {
+        console.error("⚠️ Telegram DM failed:", await dm.text());
+      } else {
+        console.log("📨 Sent Telegram DM to user", userId);
+      }
+    }
+
+    // Announce in the channel
+    const CHANNEL = "@sunolabs_submissions";
+    const broadcast = await fetch(TELEGRAM_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: CHANNEL,
+        text: `💰 New payment confirmed: ${amount} SOL added to the pot.`,
+      }),
+    });
+
+    if (!broadcast.ok) {
+      console.error("⚠️ Telegram broadcast failed:", await broadcast.text());
+    } else {
+      console.log("📣 Announced payment in channel.");
+    }
+
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error("⚠️ Webhook error:", err.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
+
 
 // === PAYMENT PAGE ===
 app.get("/pay", (req, res) => {
