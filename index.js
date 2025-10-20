@@ -117,7 +117,7 @@ async function sendPayment(){
   const rpc=btn.dataset.rpc;
   const reference=btn.dataset.reference;
   const userId=btn.dataset.userid;
-  const BOT_URL="https://YOUR-BOT-SERVER.onrender.com/confirm-payment"; // 👈 update
+  const BOT_URL = "https://sunolabs-webhook.onrender.com/confirm-payment";
 
   try{
     await provider.connect();
