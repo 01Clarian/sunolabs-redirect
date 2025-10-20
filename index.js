@@ -1,3 +1,14 @@
+import express from "express";
+
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+// --- optional root route ---
+app.get("/", (req, res) => {
+  res.send("✅ SunoLabs Redirect is live! Use /pay?recipient=...&amount=...");
+});
+
+// --- main /pay route ---
 app.get("/pay", (req, res) => {
   const { recipient, amount, reference, label, message } = req.query;
 
@@ -53,23 +64,24 @@ app.get("/pay", (req, res) => {
           const uri = "${solanaURI}";
           const intent = "${intentURI}";
 
-          // Try all wallet open methods
           function tryOpen() {
-            // Mobile Android intent (works in Chrome mobile)
             if (navigator.userAgent.toLowerCase().includes("android")) {
-              window.location = intent;
+              window.location = intent;   // Android intent scheme
             } else {
-              // Desktop or iOS
-              window.location = uri;
+              window.location = uri;      // iOS + desktop
             }
           }
 
           document.getElementById("openWallet").onclick = tryOpen;
-          // Try automatically after 800ms
           setTimeout(tryOpen, 800);
         </script>
       </body>
     </html>
   `);
+});
+
+// --- start server ---
+app.listen(PORT, () => {
+  console.log(`✅ SunoLabs Redirect running on ${PORT}`);
 });
 
