@@ -2,7 +2,7 @@ import express from "express";
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// ✅ Use Helius RPC (works with free plan)
+// ✅ Use Helius RPC (free plan works)
 const RPC_URL =
   process.env.SOLANA_RPC_URL ||
   "https://mainnet.helius-rpc.com/?api-key=f6691497-4961-41e1-9a08-53f30c65bf43";
@@ -93,24 +93,24 @@ function log(msg, type="info") {
   console.log(msg);
 }
 
-log("🟢 Page loaded — ready.");
+log("🟢 Page loaded — initializing...");
 
-// Load Solana Web3
+// Load Solana Web3.js
 let Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL;
 try {
-  const w3 = await import("https://esm.sh/@solana/web3.js@1.95.8");
-  ({ Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = w3);
-  log("✅ Solana Web3.js loaded", "success");
+  const solanaWeb3 = await import("https://esm.sh/@solana/web3.js@1.95.8");
+  ({ Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = solanaWeb3);
+  log("✅ Solana Web3.js loaded successfully", "success");
 } catch (err) {
-  log("❌ Failed to load Web3.js: " + err.message, "error");
-  alert("Error loading Solana library. Please refresh.");
+  log("❌ Failed to load Solana library: " + err.message, "error");
+  alert("Failed to load payment library. Please refresh the page.");
 }
 
 const RPC_URL = "${RPC_URL}";
 const RECIPIENT = "${safe(recipient)}";
 const AMOUNT = parseFloat("${safe(amount)}");
 
-// Detect Phantom or Solflare only
+// ✅ Detect Phantom or Solflare only
 function getWallet() {
   const w = window;
   if (w.solana?.isPhantom) return { provider: w.solana, name: "Phantom" };
@@ -119,7 +119,7 @@ function getWallet() {
 }
 
 async function sendPayment() {
-  log("🖱️ Button clicked — starting flow...");
+  log("🖱️ Button clicked — starting payment flow...");
   const wallet = getWallet();
 
   if (!wallet) {
@@ -135,7 +135,7 @@ async function sendPayment() {
     // Connect (must be inside click event)
     await provider.connect();
     const pubkey = provider.publicKey?.toBase58();
-    log("✅ Connected: " + pubkey.substring(0,8) + "...", "success");
+    log("✅ Connected wallet: " + pubkey.substring(0, 8) + "...", "success");
 
     const conn = new Connection(RPC_URL, "confirmed");
 
@@ -152,10 +152,10 @@ async function sendPayment() {
     log("✍️ Requesting signature...");
     const signedTx = await provider.signTransaction(tx);
     const sig = await conn.sendRawTransaction(signedTx.serialize());
-    log("📡 Sent: " + sig, "success");
+    log("📡 Sent TX: " + sig, "success");
 
     await conn.confirmTransaction(sig, "confirmed");
-    log("✅ Confirmed on chain!", "success");
+    log("✅ Confirmed on-chain!", "success");
     alert("✅ Payment successful!\\n\\nSignature: " + sig + "\\nView on Solscan: https://solscan.io/tx/" + sig);
   } catch (err) {
     log("❌ Error: " + err.message, "error");
@@ -167,13 +167,22 @@ async function sendPayment() {
   }
 }
 
-window.onload = () => {
+// ✅ Attach after DOM is ready (fixes module onload issue)
+document.addEventListener("DOMContentLoaded", () => {
   const btn = document.getElementById("sendBtn");
-  if (btn) {
-    btn.onclick = sendPayment;
-    log("✅ Button handler attached", "success");
+  if (!btn) {
+    log("❌ Button not found at DOMContentLoaded!", "error");
+    return;
   }
-};
+
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    log("🖱️ Button clicked (event fired)", "info");
+    sendPayment();
+  });
+
+  log("✅ Button handler attached after DOM ready", "success");
+});
 </script>
 </body>
 </html>`);
