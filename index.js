@@ -22,22 +22,22 @@ app.post("/log", (req, res) => {
   res.sendStatus(200);
 });
 
-// === PAYMENT PAGE (HTML only, no inline module code) ===
+// === PAYMENT PAGE ===
 app.get("/pay", (req, res) => {
   const {
     recipient,
     amount = "0.01",
     label = "SunoLabs Entry",
     message = "Confirm your submission",
+    reference = ""
   } = req.query;
 
   if (!recipient) return res.status(400).send("Missing recipient address");
 
-  // VERY SIMPLE escaping for HTML text nodes
+  // simple escape for HTML
   const esc = (s = "") =>
     String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-  // We pass config as data-* attributes; JS module will read them safely.
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.send(`<!doctype html>
 <html lang="en">
@@ -63,24 +63,24 @@ app.get("/pay", (req, res) => {
     data-recipient="${esc(recipient)}"
     data-amount="${esc(amount)}"
     data-rpc="${esc(RPC_URL)}"
+    data-reference="${esc(reference)}"
   >💸 Send with Wallet</button>
 
   <p class="info">Compatible with Phantom & Solflare wallets</p>
 
   <div id="debug"><div style="color:#60a5fa;margin-bottom:10px;">📋 Debug Console:</div></div>
 
-  <!-- Load the app logic as a separate ES module -->
   <script type="module" src="/app.js"></script>
   <noscript style="color:#ff6b6b">JavaScript required</noscript>
 </body>
 </html>`);
 });
 
-// === APP MODULE (served as JS file to avoid inline template glitches) ===
+// === APP.JS (front-end module) ===
 app.get("/app.js", (req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.send(`
-// --- tiny log panel + server logger ---
+// --- tiny debug + log to Render ---
 const dbg = document.getElementById("debug");
 function log(msg, type="info"){
   const cls = type==="error" ? "log-error" : type==="success" ? "log-success" : "log-info";
@@ -92,7 +92,6 @@ function log(msg, type="info"){
 
 log("🟢 App module loaded");
 
-// Load Solana web3.js from esm.sh
 let Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL;
 try {
   const w3 = await import("https://esm.sh/@solana/web3.js@1.95.8");
@@ -102,14 +101,15 @@ try {
   log("❌ Failed to load web3.js: " + e.message, "error");
 }
 
-// Grab config from the button's data-attrs
+// --- Setup ---
 const btn = document.getElementById("sendBtn");
 if (!btn) {
-  log("❌ Button not found in DOM","error");
+  log("❌ Button not found","error");
 } else {
   log("✅ Button found, attaching handler","success");
 }
 
+// detect wallet
 function getWallet(){
   const w = window;
   if (w.solana?.isPhantom) return { provider: w.solana, name: "Phantom" };
@@ -121,7 +121,7 @@ async function sendPayment(){
   log("🖱️ Button clicked");
   const wallet = getWallet();
   if (!wallet) {
-    log("❌ No Phantom or Solflare detected","error");
+    log("❌ No Phantom or Solflare","error");
     alert("Install Phantom or Solflare wallet first.");
     return;
   }
@@ -129,6 +129,7 @@ async function sendPayment(){
   const recipient = btn.dataset.recipient;
   const amountStr = btn.dataset.amount || "0.01";
   const rpc = btn.dataset.rpc;
+  const reference = btn.dataset.reference;
   const amount = parseFloat(amountStr);
 
   if (!recipient || !amount || !rpc) {
@@ -144,18 +145,28 @@ async function sendPayment(){
     await provider.connect();
     log("🔗 Wallet connected: " + (provider.publicKey?.toBase58?.() || "unknown"), "success");
 
-    // Build transfer
     const conn = new Connection(rpc, "confirmed");
     const ix = SystemProgram.transfer({
       fromPubkey: provider.publicKey,
       toPubkey: new PublicKey(recipient),
       lamports: Math.floor(amount * LAMPORTS_PER_SOL)
     });
+
     const tx = new Transaction().add(ix);
     tx.feePayer = provider.publicKey;
     tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
 
-    // Sign + send + confirm
+    // ✅ Attach reference (for bot detection)
+    if (reference) {
+      const refKey = new PublicKey(reference);
+      tx.instructions[0].keys.push({
+        pubkey: refKey,
+        isSigner: false,
+        isWritable: false
+      });
+      log("🔖 Added reference: " + reference, "info");
+    }
+
     log("✍️ Requesting signature…");
     const signed = await provider.signTransaction(tx);
     const sig = await conn.sendRawTransaction(signed.serialize());
@@ -181,5 +192,5 @@ if (btn) {
 
 // === START SERVER ===
 app.listen(PORT, () => {
-  console.log(`✅ SunoLabs Redirect running on port ${PORT}`);
+  console.log(\`✅ SunoLabs Redirect running on port \${PORT}\`);
 });
