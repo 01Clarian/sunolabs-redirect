@@ -51,18 +51,21 @@ app.get("/pay", (req, res) => {
         const conn = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
 
         // build transaction
-        const tx = new Transaction().add({
-          keys: [
-            { pubkey: new PublicKey("${reference || "11111111111111111111111111111111"}"), isSigner: false, isWritable: false }
-          ],
-          programId: SystemProgram.programId,
-          data: Buffer.alloc(0),
-          ...SystemProgram.transfer({
-            fromPubkey: provider.publicKey,
-            toPubkey: new PublicKey("${recipient}"),
-            lamports: parseFloat("${amount}") * LAMPORTS_PER_SOL
-          })
-        });
+      const transferIx = SystemProgram.transfer({
+        fromPubkey: provider.publicKey,
+        toPubkey: new PublicKey("${recipient}"),
+        lamports: parseFloat("${amount}") * LAMPORTS_PER_SOL
+      });
+      
+      // ✅ add reference key metadata for your bot tracking
+      transferIx.keys.push({
+        pubkey: new PublicKey("${reference || "11111111111111111111111111111111"}"),
+        isSigner: false,
+        isWritable: false
+      });
+      
+      const tx = new Transaction().add(transferIx);
+
 
         tx.feePayer = provider.publicKey;
         tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
