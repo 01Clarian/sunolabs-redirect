@@ -145,5 +145,6 @@ a {
 
 // === START SERVER ===
 app.listen(PORT, () => {
-  console.log(\`✅ SunoLabs Redirect running on \${PORT}\`);
+  console.log(`✅ SunoLabs Redirect running on ${PORT}`);
 });
+
