@@ -2,14 +2,21 @@ import express from "express";
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// ✅ Use Helius RPC (set via ENV or fallback)
+const RPC_URL =
+  process.env.SOLANA_RPC_URL ||
+  "https://mainnet.helius-rpc.com/?api-key=f6691497-4961-41e1-9a08-53f30c65bf43";
+
 app.get("/", (req, res) => {
   res.send("✅ SunoLabs Redirect is live! Use /pay?recipient=...&amount=...");
 });
 
-// === MAIN DAPP /PAY ROUTE ===
+// === MAIN /PAY DAPP PAGE ===
 app.get("/pay", (req, res) => {
   const { recipient, amount = "0.01", reference, label, message } = req.query;
-  if (!recipient) return res.status(400).send("Missing recipient");
+  if (!recipient) {
+    return res.status(400).send("Missing recipient address");
+  }
 
   res.send(`
 <!DOCTYPE html>
@@ -25,12 +32,10 @@ app.get("/pay", (req, res) => {
       PublicKey,
       SystemProgram,
       Transaction,
-      clusterApiUrl,
       LAMPORTS_PER_SOL
     } from "https://esm.sh/@solana/web3.js";
 
     async function getProvider() {
-      // detect multiple wallets
       const w = window;
       if (w.solana?.isPhantom) return w.solana;
       if (w.solflare?.isSolflare) return w.solflare;
@@ -46,32 +51,31 @@ app.get("/pay", (req, res) => {
       }
 
       try {
-        // connect wallet
         await provider.connect();
-        const conn = new Connection(clusterApiUrl("mainnet-beta"), "confirmed");
+        const conn = new Connection("${RPC_URL}", "confirmed");
 
-        // build transaction
-      const transferIx = SystemProgram.transfer({
-        fromPubkey: provider.publicKey,
-        toPubkey: new PublicKey("${recipient}"),
-        lamports: parseFloat("${amount}") * LAMPORTS_PER_SOL
-      });
-      
-      // ✅ add reference key metadata for your bot tracking
-      transferIx.keys.push({
-        pubkey: new PublicKey("${reference || "11111111111111111111111111111111"}"),
-        isSigner: false,
-        isWritable: false
-      });
-      
-      const tx = new Transaction().add(transferIx);
+        // Create transfer instruction
+        const ix = SystemProgram.transfer({
+          fromPubkey: provider.publicKey,
+          toPubkey: new PublicKey("${recipient}"),
+          lamports: parseFloat("${amount}") * LAMPORTS_PER_SOL,
+        });
 
+        // Optional reference tag (for your bot tracking)
+        if ("${reference}") {
+          ix.keys.push({
+            pubkey: new PublicKey("${reference}"),
+            isSigner: false,
+            isWritable: false,
+          });
+        }
 
+        const tx = new Transaction().add(ix);
         tx.feePayer = provider.publicKey;
         tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
 
         const sig = await provider.signAndSendTransaction(tx);
-        alert("✅ Transaction sent! Signature: " + sig.signature);
+        alert("✅ Payment sent! Signature: " + sig.signature);
       } catch (err) {
         console.error(err);
         alert("❌ Payment failed: " + err.message);
@@ -96,7 +100,6 @@ app.get("/pay", (req, res) => {
     a { color:#9945ff; }
   </style>
 </head>
-
 <body>
   <h2>Send ${amount} SOL to SunoLabs</h2>
   <p>${label || "Confirm entry"}<br/>${message || ""}</p>
@@ -108,7 +111,6 @@ app.get("/pay", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ SunoLabs Redirect (multi-wallet) running on ${PORT}`);
-
+  console.log(`✅ SunoLabs Redirect running on ${PORT}`);
 });
 
