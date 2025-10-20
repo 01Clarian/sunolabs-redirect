@@ -57,15 +57,29 @@ function waitForWallet() {
 }
 async function sendPayment() {
   console.log("💡 Button clicked — waiting for wallet...");
+  
+  // Show immediate feedback
+  const btn = document.getElementById("sendBtn");
+  const originalText = btn.textContent;
+  btn.textContent = "🔍 Looking for wallet...";
+  btn.disabled = true;
+  
   const provider = await waitForWallet();
   if (!provider) {
-    alert("No Solana wallet found. Please install Phantom, Solflare, or Backpack.");
+    btn.textContent = originalText;
+    btn.disabled = false;
+    alert("⚠️ No Solana wallet found.\\n\\nPlease open this link in your regular browser (not Telegram) or install a wallet like Phantom first.");
     return;
   }
+  
+  btn.textContent = "🔗 Connecting...";
   try {
     console.log("🔗 Connecting to wallet...");
     await provider.connect();
     console.log("✅ Connected to wallet:", provider.publicKey.toBase58());
+    
+    btn.textContent = "📝 Building transaction...";
+    
     const conn = new Connection(RPC_URL, "confirmed");
     
     // Create transfer instruction
@@ -101,8 +115,15 @@ async function sendPayment() {
     await conn.confirmTransaction(sig, "confirmed");
     
     console.log("✅ Transaction confirmed:", sig);
+    btn.textContent = "✅ Success!";
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }, 3000);
     alert("✅ Payment sent successfully!\\n\\nSignature: " + sig + "\\n\\nView on Solscan: https://solscan.io/tx/" + sig);
   } catch (err) {
+    btn.textContent = originalText;
+    btn.disabled = false;
     console.error("❌ Payment failed:", err);
     if (err.message.includes("User rejected")) {
       alert("❌ Transaction cancelled by user");
@@ -152,6 +173,16 @@ a {
   <p style="margin-top:20px;color:#aaa">
     Compatible with Phantom, Solflare & Backpack
   </p>
+  <p style="margin-top:10px;color:#666;font-size:12px">
+    ⚠️ If button doesn't work, open this page in your regular browser (Chrome/Safari)
+  </p>
+  <div id="debug" style="margin-top:30px;padding:10px;background:#1a1a1a;border-radius:8px;font-size:12px;color:#888;text-align:left;max-width:400px;margin-left:auto;margin-right:auto;"></div>
+  <script>
+    // Add click test
+    document.getElementById("sendBtn").addEventListener("click", () => {
+      document.getElementById("debug").innerHTML += "🔵 Click detected at " + new Date().toLocaleTimeString() + "<br>";
+    });
+  </script>
 </body>
 </html>`);
 });
