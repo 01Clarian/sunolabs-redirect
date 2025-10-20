@@ -1,10 +1,3 @@
-import express from "express";
-const app = express();
-
-app.get("/", (req, res) => {
-  res.send("✅ SunoLabs Redirect is live! Use /pay?recipient=...&amount=...");
-});
-
 app.get("/pay", (req, res) => {
   const { recipient, amount, reference, label, message } = req.query;
 
@@ -18,7 +11,8 @@ app.get("/pay", (req, res) => {
     (label ? `&label=${encodeURIComponent(label)}` : "") +
     (message ? `&message=${encodeURIComponent(message)}` : "");
 
-  // Serve an HTML page instead of a direct redirect
+  const intentURI = `intent://${solanaURI.replace("solana:", "")}#Intent;scheme=solana;end`;
+
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
@@ -43,27 +37,39 @@ app.get("/pay", (req, res) => {
             border-radius: 8px;
             cursor: pointer;
           }
-          button:hover {
-            background-color: #7e2fff;
-          }
+          button:hover { background-color: #7e2fff; }
+          a { color: #9945ff; }
         </style>
       </head>
       <body>
         <h2>Open in your Solana wallet</h2>
-        <p>Click the button below if your wallet doesn’t open automatically.</p>
+        <p>Click below if your wallet doesn’t open automatically.</p>
         <button id="openWallet">Open Wallet</button>
+        <p style="margin-top:20px;">
+          Or copy this link manually:<br/>
+          <a href="${solanaURI}">${solanaURI}</a>
+        </p>
         <script>
           const uri = "${solanaURI}";
-          // Try automatic open after short delay
-          setTimeout(() => { window.location = uri; }, 800);
-          document.getElementById("openWallet").onclick = () => {
-            window.location = uri;
-          };
+          const intent = "${intentURI}";
+
+          // Try all wallet open methods
+          function tryOpen() {
+            // Mobile Android intent (works in Chrome mobile)
+            if (navigator.userAgent.toLowerCase().includes("android")) {
+              window.location = intent;
+            } else {
+              // Desktop or iOS
+              window.location = uri;
+            }
+          }
+
+          document.getElementById("openWallet").onclick = tryOpen;
+          // Try automatically after 800ms
+          setTimeout(tryOpen, 800);
         </script>
       </body>
     </html>
   `);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ SunoLabs Redirect running on ${PORT}`));
