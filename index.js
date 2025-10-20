@@ -170,6 +170,6 @@ const attachInterval = setInterval(() => {
 });
 
 app.listen(PORT, () => {
-  console.log(\`✅ SunoLabs Redirect running on port \${PORT}\`);
+console.log(`✅ SunoLabs Redirect running on port ${PORT}`);
 });
 
