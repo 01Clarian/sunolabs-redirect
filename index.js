@@ -105,6 +105,7 @@ app.get("/pay", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(\`✅ SunoLabs Redirect (multi-wallet) running on \${PORT}\`);
+  console.log(`✅ SunoLabs Redirect (multi-wallet) running on ${PORT}`);
+
 });
 
