@@ -1,7 +1,6 @@
 import express from "express";
 const app = express();
 const PORT = process.env.PORT || 10000;
-import fetch from "node-fetch";   // ✅ add this
 
 app.use(express.json());
 
