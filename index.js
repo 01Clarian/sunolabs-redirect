@@ -4,20 +4,24 @@ const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
 
+// === CONFIG ===
 const RPC_URL =
   process.env.SOLANA_RPC_URL ||
   "https://mainnet.helius-rpc.com/?api-key=f6691497-4961-41e1-9a08-53f30c65bf43";
 
+// === BASIC HEALTH ===
 app.get("/", (_, res) => {
   res.send("✅ SunoLabs Redirect is live! Use /pay?recipient=...&amount=...");
 });
 
+// === CLIENT LOGGING (for Render logs) ===
 app.post("/log", (req, res) => {
   const { event, detail } = req.body || {};
   console.log(`🟣 [CLIENT LOG] ${event || "event"}: ${detail || "no details"}`);
   res.sendStatus(200);
 });
 
+// === PAYMENT PAGE ===
 app.get("/pay", (req, res) => {
   const {
     recipient,
@@ -25,6 +29,7 @@ app.get("/pay", (req, res) => {
     label = "SunoLabs Entry",
     message = "Confirm your submission",
     reference = "",
+    userId = "",
   } = req.query;
 
   if (!recipient) return res.status(400).send("Missing recipient address");
@@ -57,6 +62,7 @@ app.get("/pay", (req, res) => {
     data-amount="${esc(amount)}"
     data-rpc="${esc(RPC_URL)}"
     data-reference="${esc(reference)}"
+    data-userid="${esc(userId)}"
   >💸 Send with Wallet</button>
 
   <p class="info">Compatible with Phantom & Solflare wallets</p>
@@ -68,6 +74,7 @@ app.get("/pay", (req, res) => {
 </html>`);
 });
 
+// === SEPARATE JS MODULE ===
 app.get("/app.js", (req, res) => {
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.send(`
@@ -82,6 +89,7 @@ function log(msg, type="info"){
 }
 log("🟢 App module loaded");
 
+// Load Solana web3.js
 let Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL;
 try {
   const w3 = await import("https://esm.sh/@solana/web3.js@1.95.8");
@@ -108,11 +116,18 @@ async function sendPayment(){
   const amount=parseFloat(btn.dataset.amount||"0.01");
   const rpc=btn.dataset.rpc;
   const reference=btn.dataset.reference;
+  const userId=btn.dataset.userid;
+  const BOT_URL="https://YOUR-BOT-SERVER.onrender.com/confirm-payment"; // 👈 update
+
   try{
     await provider.connect();
     log("🔗 Connected to "+(provider.publicKey?.toBase58?.()||"unknown"),"success");
     const conn=new Connection(rpc,"confirmed");
-    const ix=SystemProgram.transfer({fromPubkey:provider.publicKey,toPubkey:new PublicKey(recipient),lamports:Math.floor(amount*LAMPORTS_PER_SOL)});
+    const ix=SystemProgram.transfer({
+      fromPubkey:provider.publicKey,
+      toPubkey:new PublicKey(recipient),
+      lamports:Math.floor(amount*LAMPORTS_PER_SOL)
+    });
     const tx=new Transaction().add(ix);
     tx.feePayer=provider.publicKey;
     tx.recentBlockhash=(await conn.getLatestBlockhash()).blockhash;
@@ -128,7 +143,18 @@ async function sendPayment(){
     await conn.confirmTransaction(sig,"confirmed");
     log("✅ Confirmed "+sig,"success");
     alert("✅ Payment sent!\\nSignature: "+sig);
-  }catch(e){log("❌ "+(e.message||e),"error");alert("❌ "+(e.message||e));}
+
+    // ✅ Instantly notify your Telegram bot
+    fetch(BOT_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({signature:sig,reference,userId,amount})
+    }).then(()=>log("📨 Notified bot","success")).catch(err=>log("⚠️ Notify failed: "+err.message,"error"));
+
+  }catch(e){
+    log("❌ "+(e.message||e),"error");
+    alert("❌ "+(e.message||e));
+  }
 }
 
 if(btn){
@@ -138,7 +164,8 @@ if(btn){
 `);
 });
 
-// ✅ Start server — clean backticks (no escapes)
+// === START SERVER ===
 app.listen(PORT, () => {
   console.log(`✅ SunoLabs Redirect running on port ${PORT}`);
 });
+
