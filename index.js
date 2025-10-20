@@ -2,17 +2,15 @@ import express from "express";
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// ✅ Use Helius RPC (free plan works)
+// ✅ Helius RPC endpoint
 const RPC_URL =
   process.env.SOLANA_RPC_URL ||
   "https://mainnet.helius-rpc.com/?api-key=f6691497-4961-41e1-9a08-53f30c65bf43";
 
-// === ROOT ===
 app.get("/", (req, res) => {
   res.send("✅ SunoLabs Redirect is live! Use /pay?recipient=...&amount=...");
 });
 
-// === MAIN PAYMENT PAGE ===
 app.get("/pay", (req, res) => {
   const {
     recipient,
@@ -95,22 +93,21 @@ function log(msg, type="info") {
 
 log("🟢 Page loaded — initializing...");
 
-// Load Solana Web3.js
 let Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL;
 try {
-  const solanaWeb3 = await import("https://esm.sh/@solana/web3.js@1.95.8");
-  ({ Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = solanaWeb3);
-  log("✅ Solana Web3.js loaded successfully", "success");
+  const w3 = await import("https://esm.sh/@solana/web3.js@1.95.8");
+  ({ Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = w3);
+  log("✅ Solana Web3.js loaded", "success");
 } catch (err) {
-  log("❌ Failed to load Solana library: " + err.message, "error");
-  alert("Failed to load payment library. Please refresh the page.");
+  log("❌ Failed to load Solana lib: " + err.message, "error");
+  alert("Error loading Solana library.");
 }
 
 const RPC_URL = "${RPC_URL}";
 const RECIPIENT = "${safe(recipient)}";
 const AMOUNT = parseFloat("${safe(amount)}");
 
-// ✅ Detect Phantom or Solflare only
+// ✅ Phantom + Solflare only
 function getWallet() {
   const w = window;
   if (w.solana?.isPhantom) return { provider: w.solana, name: "Phantom" };
@@ -119,32 +116,24 @@ function getWallet() {
 }
 
 async function sendPayment() {
-  log("🖱️ Button clicked — starting payment flow...");
+  log("🖱️ Button click event triggered", "info");
   const wallet = getWallet();
-
   if (!wallet) {
-    log("❌ No Phantom or Solflare detected", "error");
-    alert("Please install Phantom or Solflare wallet.");
+    log("❌ No Phantom or Solflare found", "error");
+    alert("Install Phantom or Solflare wallet first.");
     return;
   }
 
   const { provider, name } = wallet;
   log("🟣 Using wallet: " + name);
-
   try {
-    // Connect (must be inside click event)
     await provider.connect();
-    const pubkey = provider.publicKey?.toBase58();
-    log("✅ Connected wallet: " + pubkey.substring(0, 8) + "...", "success");
-
     const conn = new Connection(RPC_URL, "confirmed");
-
     const ix = SystemProgram.transfer({
       fromPubkey: provider.publicKey,
       toPubkey: new PublicKey(RECIPIENT),
       lamports: Math.floor(AMOUNT * LAMPORTS_PER_SOL),
     });
-
     const tx = new Transaction().add(ix);
     tx.feePayer = provider.publicKey;
     tx.recentBlockhash = (await conn.getLatestBlockhash()).blockhash;
@@ -152,42 +141,35 @@ async function sendPayment() {
     log("✍️ Requesting signature...");
     const signedTx = await provider.signTransaction(tx);
     const sig = await conn.sendRawTransaction(signedTx.serialize());
-    log("📡 Sent TX: " + sig, "success");
-
     await conn.confirmTransaction(sig, "confirmed");
-    log("✅ Confirmed on-chain!", "success");
-    alert("✅ Payment successful!\\n\\nSignature: " + sig + "\\nView on Solscan: https://solscan.io/tx/" + sig);
+
+    log("✅ Transaction confirmed: " + sig, "success");
+    alert("✅ Payment successful!\\nSignature: " + sig);
   } catch (err) {
-    log("❌ Error: " + err.message, "error");
-    if (err.message.includes("User rejected")) {
-      alert("❌ Transaction cancelled by user.");
-    } else {
-      alert("❌ Payment failed: " + err.message);
-    }
+    log("❌ " + err.message, "error");
+    alert("❌ " + err.message);
   }
 }
 
-// ✅ Attach after DOM is ready (fixes module onload issue)
-document.addEventListener("DOMContentLoaded", () => {
+// ✅ GUARANTEED ATTACH (works even if module runs early)
+function attachButtonHandler() {
   const btn = document.getElementById("sendBtn");
-  if (!btn) {
-    log("❌ Button not found at DOMContentLoaded!", "error");
-    return;
-  }
+  if (!btn) return false;
+  btn.onclick = (e) => { e.preventDefault(); sendPayment(); };
+  log("✅ Button handler attached", "success");
+  return true;
+}
 
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    log("🖱️ Button clicked (event fired)", "info");
-    sendPayment();
-  });
-
-  log("✅ Button handler attached after DOM ready", "success");
-});
+// Try repeatedly until it exists (handles async load timing)
+const attachInterval = setInterval(() => {
+  if (attachButtonHandler()) clearInterval(attachInterval);
+}, 300);
 </script>
 </body>
 </html>`);
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ SunoLabs Redirect running on port ${PORT}`);
+  console.log(\`✅ SunoLabs Redirect running on port \${PORT}\`);
 });
+
