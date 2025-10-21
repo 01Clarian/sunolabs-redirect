@@ -239,7 +239,7 @@ async function sendPayment(){
         reference,
         userId,
         amount,
-        senderWallet: userPubkey // Send the user's wallet address
+        senderWallet: userPubkey
       })
     });
     log("✅ Bot notified successfully","success");
@@ -262,62 +262,9 @@ if(btn){
   log("✅ Click handler attached","success");
 }
 `);
-}); No wallet detected","error");
-    alert("Please install Phantom, Solflare, or Backpack wallet");
-    processing = false;
-    btn.disabled = false;
-    btn.textContent = "💳 Connect Wallet & Pay";
-    return;
-  }
-  
-  const {provider,name} = wallet;
-  const recipient = btn.dataset.recipient;
-  const amount = parseFloat(btn.dataset.amount || "0.01");
-  const rpc = btn.dataset.rpc;
-  const reference = btn.dataset.reference;
-  const userId = btn.dataset.userid;
-  const botUrl = btn.dataset.botUrl;
+});
 
-  try{
-    log(\`🔌 Connecting to \${name}...\`);
-    await provider.connect();
-    const userPubkey = provider.publicKey?.toBase58?.() || "unknown";
-    log(\`🔗 Connected: \${userPubkey.substring(0,8)}...\`,"success");
-    
-    const conn = new Connection(rpc,"confirmed");
-    
-    log("📝 Building transaction...");
-    const ix = SystemProgram.transfer({
-      fromPubkey: provider.publicKey,
-      toPubkey: new PublicKey(recipient),
-      lamports: Math.floor(amount * LAMPORTS_PER_SOL)
-    });
-    
-    const tx = new Transaction().add(ix);
-    tx.feePayer = provider.publicKey;
-    
-    log("⏳ Fetching blockhash...");
-    const {blockhash} = await conn.getLatestBlockhash();
-    tx.recentBlockhash = blockhash;
-    
-    if(reference){
-      const refKey = new PublicKey(reference);
-      tx.instructions[0].keys.push({
-        pubkey: refKey,
-        isSigner: false,
-        isWritable: false
-      });
-      log(\`🔖 Reference: \${reference.substring(0,8)}...\`);
-    }
-    
-    log("✍️ Requesting signature...");
-    btn.textContent = "✍️ Sign in wallet...";
-    const signed = await provider.signTransaction(tx);
-    
-    log("📡 Sending transaction...");
-    btn.textContent = "📡 Sending...";
-    const sig = await conn.sendRawTransaction(signed.serialize());
-    log(\`📤 Signature: \${sig.substring(0,8)}...\`,"success");
-    
-    log("⏳ Confirming...");
-
+// === START SERVER ===
+app.listen(PORT, () => {
+  console.log(`✅ SunoLabs Redirect running on port ${PORT}`);
+});
