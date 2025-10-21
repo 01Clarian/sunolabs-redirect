@@ -77,6 +77,14 @@ app.get("/pay", (req, res) => {
   .custom-amount{margin-top:16px;padding:12px;background:#0a0a0a;border-radius:8px}
   .custom-amount input{width:100%;padding:12px;background:#1a1a1a;border:2px solid #333;border-radius:8px;color:#fff;font-size:16px}
   .custom-amount input:focus{outline:none;border-color:#9945ff}
+  .wallet-selector{margin:20px 0;padding:16px;background:#1a1a1a;border-radius:12px;border:1px solid #333}
+  .wallet-option{display:flex;align-items:center;padding:12px;margin:8px 0;background:#0a0a0a;border:2px solid #333;border-radius:8px;cursor:pointer;transition:.2s}
+  .wallet-option:hover{border-color:#9945ff;background:#1a1a2a}
+  .wallet-option.selected{border-color:#9945ff;background:#1a1a2a}
+  .wallet-option.disabled{opacity:0.5;cursor:not-allowed}
+  .wallet-icon{font-size:24px;margin-right:12px}
+  .wallet-name{font-weight:600;font-size:16px}
+  .wallet-status{font-size:12px;color:#4ade80;margin-left:auto}
   button{background:#9945ff;border:none;border-radius:12px;padding:16px 32px;font-size:18px;color:#fff;cursor:pointer;margin-top:24px;transition:.2s;font-weight:600;box-shadow:0 4px 12px rgba(153,69,255,.3);width:100%}
   button:hover:not(:disabled){background:#7e2fff;transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
   button:disabled{opacity:.6;cursor:not-allowed}
@@ -93,6 +101,11 @@ app.get("/pay", (req, res) => {
     <h2>💸 SunoLabs Entry Payment</h2>
     <p class="detail">${esc(label)}</p>
     <p>${esc(message)}</p>
+
+    <div class="wallet-selector" id="walletSelector">
+      <p style="margin-bottom:12px;font-weight:600;">Select your wallet:</p>
+      <div id="walletOptions"></div>
+    </div>
 
     <div class="amount-selector">
       <p style="margin-bottom:16px;font-weight:600;">Choose your entry amount:</p>
@@ -144,6 +157,69 @@ app.get("/pay", (req, res) => {
   </div>
 
   <script>
+    // Detect and display available wallets
+    let selectedWallet = null;
+
+    function detectWallets() {
+      const wallets = [];
+      const w = window;
+      
+      if (w.phantom?.solana?.isPhantom) {
+        wallets.push({ name: 'Phantom', icon: '👻', provider: w.phantom.solana, key: 'phantom' });
+      }
+      if (w.solflare?.isSolflare) {
+        wallets.push({ name: 'Solflare', icon: '🔆', provider: w.solflare, key: 'solflare' });
+      }
+      if (w.backpack?.isBackpack) {
+        wallets.push({ name: 'Backpack', icon: '🎒', provider: w.backpack, key: 'backpack' });
+      }
+      if (w.okxwallet?.solana) {
+        wallets.push({ name: 'OKX Wallet', icon: '⭕', provider: w.okxwallet.solana, key: 'okx' });
+      }
+      
+      return wallets;
+    }
+
+    function renderWalletOptions() {
+      const wallets = detectWallets();
+      const container = document.getElementById('walletOptions');
+      
+      if (wallets.length === 0) {
+        container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">No Solana wallets detected. Please install Phantom, Solflare, or another wallet.</p>';
+        return;
+      }
+
+      wallets.forEach((wallet, index) => {
+        const option = document.createElement('div');
+        option.className = 'wallet-option' + (index === 0 ? ' selected' : '');
+        option.innerHTML = \`
+          <span class="wallet-icon">\${wallet.icon}</span>
+          <span class="wallet-name">\${wallet.name}</span>
+          <span class="wallet-status">✓ Detected</span>
+        \`;
+        option.onclick = () => {
+          document.querySelectorAll('.wallet-option').forEach(o => o.classList.remove('selected'));
+          option.classList.add('selected');
+          selectedWallet = wallet;
+        };
+        container.appendChild(option);
+        
+        // Auto-select first wallet
+        if (index === 0) selectedWallet = wallet;
+      });
+    }
+
+    function getSelectedWallet() {
+      if (!selectedWallet) {
+        const wallets = detectWallets();
+        return wallets.length > 0 ? wallets[0] : null;
+      }
+      return selectedWallet;
+    }
+
+    // Render wallets on page load
+    renderWalletOptions();
+
     // Amount selection handling
     document.querySelectorAll('.amount-option').forEach(opt => {
       opt.addEventListener('click', () => {
@@ -220,11 +296,9 @@ if(!btn){
 }
 
 function getWallet(){
-  const w = window;
-  if(w.solana?.isPhantom) return {provider:w.solana,name:"Phantom"};
-  if(w.solflare?.isSolflare) return {provider:w.solflare,name:"Solflare"};
-  if(w.backpack?.isBackpack) return {provider:w.backpack,name:"Backpack"};
-  return null;
+  const selected = getSelectedWallet();
+  if (!selected) return null;
+  return { provider: selected.provider, name: selected.name };
 }
 
 async function sendPayment(){
@@ -325,9 +399,9 @@ async function sendPayment(){
     
     let bonusMsg = "";
     if (amount >= 0.10) {
-      bonusMsg = "\\n\\n👑 Patron status unlocked! 1.5x winnings if you win!";
+      bonusMsg = "\\n\\n👑 Patron status unlocked! +10% winnings if you win!";
     } else if (amount >= 0.05) {
-      bonusMsg = "\\n\\n💎 Supporter status unlocked! 1.25x winnings if you win!";
+      bonusMsg = "\\n\\n💎 Supporter status unlocked! +5% winnings if you win!";
     }
     
     alert(\`✅ Payment sent successfully!\\n\\nAmount: \${amount} SOL\\nWallet: \${userPubkey.substring(0,8)}...\\nSignature: \${sig.substring(0,8)}...\${bonusMsg}\`);
