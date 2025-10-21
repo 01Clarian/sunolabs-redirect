@@ -2,11 +2,12 @@ import express from "express";
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Limit request size
 
-const RPC_URL =
-  process.env.SOLANA_RPC_URL ||
-  "https://mainnet.helius-rpc.com/?api-key=f6691497-4961-41e1-9a08-53f30c65bf43";
+const RPC_URL = process.env.SOLANA_RPC_URL;
+if (!RPC_URL) {
+  throw new Error("❌ SOLANA_RPC_URL environment variable required!");
+}
 
 const BOT_CONFIRM_URL =
   process.env.BOT_CONFIRM_URL || "https://sunolabs-bot.onrender.com/confirm-payment";
