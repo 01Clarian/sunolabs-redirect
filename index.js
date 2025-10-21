@@ -111,8 +111,8 @@ app.get("/pay", (req, res) => {
       <h3>💰 How It Works</h3>
       <div class="info-item">1. Pay SOL → We buy SUNO for you on market</div>
       <div class="info-item">2. You receive SUNO tokens in your wallet</div>
-      <div class="info-item">3. Choose: Upload track OR Vote only</div>
-      <div class="info-item">4. Win prizes or earn from voting!</div>
+      <div class="info-item">3. Compete for prizes or vote & earn!</div>
+      <div class="info-item">4. Win SUNO rewards! 🏆</div>
     </div>
 
     <div class="wallet-selector">
@@ -123,17 +123,32 @@ app.get("/pay", (req, res) => {
     <div class="tier-selector">
       <p style="margin-bottom:16px;font-weight:600;font-size:18px;">Choose Your Tier:</p>
       
+      <div class="tier-option" id="tier-whale" onclick="selectTier('whale', 0.50)">
+        <div class="tier-header">
+          <div class="tier-name">🐋 Custom Amount (Whale Mode)</div>
+        </div>
+        <div class="tier-details">• Up to 75% retention awards! • Up to 1.50x prizes!</div>
+        <div class="whale-input">
+          <input type="number" id="whaleAmount" min="0.50" step="0.01" placeholder="Enter amount (min 0.50 SOL)" onchange="updateWhaleCalc()">
+        </div>
+        <div class="whale-calc" id="whaleCalc" style="display:none">
+          <div id="whaleRetention"></div>
+          <div id="whaleMultiplier"></div>
+          <div id="whaleSUNO"></div>
+        </div>
+      </div>
+
       <div class="tier-option selected" id="tier-basic" onclick="selectTier('basic', 0.01)">
         <div class="tier-header">
           <div class="tier-name">Basic</div>
           <div class="tier-badge">🎵</div>
         </div>
         <div class="tier-amount">0.01 SOL</div>
-        <div class="tier-details">• 50% retention • 1.0x prizes</div>
+        <div class="tier-details">• 50% retention awards • 1.0x prizes</div>
         <div class="tier-breakdown">
           <div class="tier-breakdown-item">Trans fee: 0.001 SOL (10%)</div>
           <div class="tier-breakdown-item">You get: ~0.0045 SOL in SUNO</div>
-          <div class="tier-breakdown-item">Competition: 0.0045 SOL</div>
+          <div class="tier-breakdown-item">Competition: 0.0045 SOL in SUNO</div>
         </div>
       </div>
 
@@ -143,11 +158,11 @@ app.get("/pay", (req, res) => {
           <div class="tier-badge">💎</div>
         </div>
         <div class="tier-amount">0.05 SOL</div>
-        <div class="tier-details">• 55% retention (+5% bonus!) • 1.05x prizes</div>
+        <div class="tier-details">• 55% retention awards (+5% bonus!) • 1.05x prizes</div>
         <div class="tier-breakdown">
           <div class="tier-breakdown-item">Trans fee: 0.005 SOL (10%)</div>
           <div class="tier-breakdown-item">You get: ~0.02475 SOL in SUNO</div>
-          <div class="tier-breakdown-item">Competition: 0.02025 SOL</div>
+          <div class="tier-breakdown-item">Competition: 0.02025 SOL in SUNO</div>
         </div>
       </div>
 
@@ -157,28 +172,11 @@ app.get("/pay", (req, res) => {
           <div class="tier-badge">👑</div>
         </div>
         <div class="tier-amount">0.10 SOL</div>
-        <div class="tier-details">• 60% retention (+10% bonus!) • 1.10x prizes</div>
+        <div class="tier-details">• 60% retention awards (+10% bonus!) • 1.10x prizes</div>
         <div class="tier-breakdown">
           <div class="tier-breakdown-item">Trans fee: 0.01 SOL (10%)</div>
           <div class="tier-breakdown-item">You get: ~0.054 SOL in SUNO</div>
-          <div class="tier-breakdown-item">Competition: 0.036 SOL</div>
-        </div>
-      </div>
-
-      <div class="tier-option" id="tier-whale" onclick="selectTier('whale', 0.50)">
-        <div class="tier-header">
-          <div class="tier-name">Whale Mode</div>
-          <div class="tier-badge">🐋</div>
-        </div>
-        <div class="tier-amount">Custom Amount</div>
-        <div class="tier-details">• Up to 75% retention! • Up to 1.50x prizes!</div>
-        <div class="whale-input">
-          <input type="number" id="whaleAmount" min="0.50" step="0.01" placeholder="Enter amount (min 0.50 SOL)" onchange="updateWhaleCalc()">
-        </div>
-        <div class="whale-calc" id="whaleCalc" style="display:none">
-          <div id="whaleRetention"></div>
-          <div id="whaleMultiplier"></div>
-          <div id="whaleSUNO"></div>
+          <div class="tier-breakdown-item">Competition: 0.036 SOL in SUNO</div>
         </div>
       </div>
     </div>
@@ -204,7 +202,7 @@ app.get("/pay", (req, res) => {
     </div>
 
     <div class="legal">
-      ⚖️ You are purchasing SUNO tokens on the open market. 10% trans fee applies. Tokens sent to your wallet. Choose to compete or vote. Winners earn SOL prizes. Voters earn from picking winners. Not gambling - skill-based competition.
+      ⚖️ You are purchasing SUNO tokens on the open market. 10% trans fee applies. Tokens sent to your wallet. Choose to compete or vote. Winners earn SUNO prizes. Voters earn from picking winners. Not gambling - skill-based competition.
     </div>
 
     <div id="debug"></div>
@@ -272,7 +270,7 @@ app.get("/pay", (req, res) => {
       const sunoValue = remaining * retention;
       
       document.getElementById('whaleCalc').style.display = 'block';
-      document.getElementById('whaleRetention').textContent = 'Retention: ' + (retention * 100).toFixed(0) + '%';
+      document.getElementById('whaleRetention').textContent = 'Retention awards: ' + (retention * 100).toFixed(0) + '%';
       document.getElementById('whaleMultiplier').textContent = 'Prize multiplier: ' + multiplier.toFixed(2) + 'x';
       document.getElementById('whaleSUNO').textContent = 'SUNO value: ~' + sunoValue.toFixed(4) + ' SOL';
     }
@@ -465,10 +463,10 @@ async function sendPayment(){
     updateStep('step-complete', 'active');
     btn.textContent = "✅ Complete!";
     btn.style.background = "#4ade80";
-    log(\`🎉 All done! Check Telegram for next steps!\`, "success");
+    log(\`🎉 All done! Check Telegram for confirmation!\`, "success");
     updateStep('step-complete', 'complete');
     
-    alert(\`✅ Purchase Complete!\\n\\n💰 Paid: \${amount} SOL\\n🪙 SUNO tokens being sent to your wallet!\\n\\nCheck Telegram to choose:\\n🎵 Upload track & compete\\n🗳️ Vote only & earn\`);
+    alert(\`✅ Purchase Complete!\\n\\n💰 Paid: \${amount} SOL\\n🪙 SUNO tokens sent to your wallet!\\n\\nCheck Telegram for your entry confirmation!\`);
     
     setTimeout(() => {
       window.close();
