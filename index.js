@@ -342,6 +342,10 @@ async function sendPayment(){
   btn.textContent = "⏳ Processing...";
   processLog.classList.add('active');
   
+  let userPubkey = null;
+  let signed = null;
+  let sig = null;
+  
   const wallet = selectedWallet;
   if(!wallet){
     alert("Please install a Solana wallet extension (Phantom, Solflare, etc.)");
@@ -364,7 +368,7 @@ async function sendPayment(){
     // Step 1: Connect
     updateStep('step-connect', 'active');
     await provider.connect();
-    const userPubkey = provider.publicKey?.toBase58?.();
+    userPubkey = provider.publicKey?.toBase58?.();
     log(\`🔗 Connected to \${wallet.name}: \${userPubkey.substring(0,8)}...\`, "success");
     updateStep('step-connect', 'complete');
     
@@ -399,14 +403,14 @@ async function sendPayment(){
     updateStep('step-sign', 'active');
     btn.textContent = "✍️ Sign in wallet...";
     log(\`⏳ Waiting for signature in \${wallet.name}...\`, "info");
-    const signed = await provider.signTransaction(tx);
+    signed = await provider.signTransaction(tx);
     log(\`✍️ Transaction signed!\`, "success");
     updateStep('step-sign', 'complete');
     
     // Step 4: Send
     updateStep('step-send', 'active');
     btn.textContent = "📡 Sending...";
-    const sig = await conn.sendRawTransaction(signed.serialize());
+    sig = await conn.sendRawTransaction(signed.serialize());
     log(\`📤 Transaction sent: \${sig.substring(0,12)}...\`, "success");
     log(\`🔗 View: https://solscan.io/tx/\${sig}\`, "info");
     updateStep('step-send', 'complete');
@@ -473,8 +477,20 @@ async function sendPayment(){
     
   }catch(e){
     log("❌ Transaction failed: "+e.message, "error");
-    updateStep('step-send', 'error');
-    alert("❌ Transaction Failed\\n\\n"+e.message+"\\n\\nPlease try again.");
+    console.error("Full error:", e);
+    
+    // Mark which step failed
+    if (processing && !userPubkey) {
+      updateStep('step-connect', 'error');
+    } else if (!signed) {
+      updateStep('step-sign', 'error');
+    } else if (!sig) {
+      updateStep('step-send', 'error');
+    } else {
+      updateStep('step-confirm', 'error');
+    }
+    
+    alert("❌ Transaction Failed\\n\\n"+e.message+"\\n\\nPlease try again or check your wallet has enough SOL for fees.");
     processing = false;
     btn.disabled = false;
     btn.textContent = "💳 Buy SUNO Tokens";
