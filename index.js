@@ -157,54 +157,38 @@ app.get("/pay", (req, res) => {
   </div>
 
   <script>
-    // Detect and display available wallets
     let selectedWallet = null;
 
     function detectWallets() {
       const wallets = [];
-      const w = window;
-      
-      if (w.phantom?.solana?.isPhantom) {
-        wallets.push({ name: 'Phantom', icon: '👻', provider: w.phantom.solana, key: 'phantom' });
-      }
-      if (w.solflare?.isSolflare) {
-        wallets.push({ name: 'Solflare', icon: '🔆', provider: w.solflare, key: 'solflare' });
-      }
-      if (w.backpack?.isBackpack) {
-        wallets.push({ name: 'Backpack', icon: '🎒', provider: w.backpack, key: 'backpack' });
-      }
-      if (w.okxwallet?.solana) {
-        wallets.push({ name: 'OKX Wallet', icon: '⭕', provider: w.okxwallet.solana, key: 'okx' });
-      }
-      
+      if (window.phantom?.solana?.isPhantom) wallets.push({ name: 'Phantom', icon: '👻', provider: window.phantom.solana });
+      if (window.solflare?.isSolflare) wallets.push({ name: 'Solflare', icon: '🔆', provider: window.solflare });
+      if (window.backpack?.isBackpack) wallets.push({ name: 'Backpack', icon: '🎒', provider: window.backpack });
+      if (window.okxwallet?.solana) wallets.push({ name: 'OKX Wallet', icon: '⭕', provider: window.okxwallet.solana });
       return wallets;
     }
 
     function renderWalletOptions() {
       const wallets = detectWallets();
       const container = document.getElementById('walletOptions');
+      if (!container) return;
       
       if (wallets.length === 0) {
-        container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">No Solana wallets detected. Please install Phantom, Solflare, or another wallet.</p>';
+        container.innerHTML = '<p style="color:#ff6b6b;text-align:center;">No Solana wallets detected</p>';
         return;
       }
 
+      container.innerHTML = '';
       wallets.forEach((wallet, index) => {
-        const option = document.createElement('div');
-        option.className = 'wallet-option' + (index === 0 ? ' selected' : '');
-        option.innerHTML = \`
-          <span class="wallet-icon">\${wallet.icon}</span>
-          <span class="wallet-name">\${wallet.name}</span>
-          <span class="wallet-status">✓ Detected</span>
-        \`;
-        option.onclick = () => {
-          document.querySelectorAll('.wallet-option').forEach(o => o.classList.remove('selected'));
-          option.classList.add('selected');
+        const div = document.createElement('div');
+        div.className = 'wallet-option' + (index === 0 ? ' selected' : '');
+        div.innerHTML = '<span class="wallet-icon">' + wallet.icon + '</span><span class="wallet-name">' + wallet.name + '</span><span class="wallet-status">✓ Detected</span>';
+        div.onclick = function() {
+          document.querySelectorAll('.wallet-option').forEach(function(o) { o.classList.remove('selected'); });
+          div.classList.add('selected');
           selectedWallet = wallet;
         };
-        container.appendChild(option);
-        
-        // Auto-select first wallet
+        container.appendChild(div);
         if (index === 0) selectedWallet = wallet;
       });
     }
@@ -217,22 +201,25 @@ app.get("/pay", (req, res) => {
       return selectedWallet;
     }
 
-    // Render wallets on page load
+    function getWallet() {
+      const selected = getSelectedWallet();
+      return selected ? { provider: selected.provider, name: selected.name } : null;
+    }
+
     renderWalletOptions();
 
-    // Amount selection handling
-    document.querySelectorAll('.amount-option').forEach(opt => {
-      opt.addEventListener('click', () => {
-        document.querySelectorAll('.amount-option').forEach(o => o.classList.remove('selected'));
+    document.querySelectorAll('.amount-option').forEach(function(opt) {
+      opt.addEventListener('click', function() {
+        document.querySelectorAll('.amount-option').forEach(function(o) { o.classList.remove('selected'); });
         opt.classList.add('selected');
         opt.querySelector('input').checked = true;
         document.getElementById('customAmount').value = '';
       });
     });
 
-    document.getElementById('customAmount').addEventListener('input', (e) => {
+    document.getElementById('customAmount').addEventListener('input', function(e) {
       if (e.target.value) {
-        document.querySelectorAll('.amount-option').forEach(o => {
+        document.querySelectorAll('.amount-option').forEach(function(o) {
           o.classList.remove('selected');
           o.querySelector('input').checked = false;
         });
@@ -241,9 +228,7 @@ app.get("/pay", (req, res) => {
 
     function getSelectedAmount() {
       const custom = document.getElementById('customAmount').value;
-      if (custom && parseFloat(custom) >= 0.01) {
-        return parseFloat(custom);
-      }
+      if (custom && parseFloat(custom) >= 0.01) return parseFloat(custom);
       const selected = document.querySelector('input[name="amount"]:checked');
       return selected ? parseFloat(selected.value) : 0.01;
     }
@@ -293,12 +278,6 @@ if(!btn){
   log("❌ Button not found","error");
 }else{
   log("✅ Button ready","success");
-}
-
-function getWallet(){
-  const selected = getSelectedWallet();
-  if (!selected) return null;
-  return { provider: selected.provider, name: selected.name };
 }
 
 async function sendPayment(){
