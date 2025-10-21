@@ -67,27 +67,72 @@ app.get("/pay", (req, res) => {
   .container{max-width:600px;margin:0 auto}
   h2{margin:0 0 12px;font-size:28px}
   p{margin:8px 0;line-height:1.6}
-  button{background:#9945ff;border:none;border-radius:12px;padding:16px 32px;font-size:18px;color:#fff;cursor:pointer;margin-top:24px;transition:.2s;font-weight:600;box-shadow:0 4px 12px rgba(153,69,255,.3)}
+  .amount-selector{margin:24px 0;padding:20px;background:#1a1a1a;border-radius:12px;border:1px solid #333}
+  .amount-option{display:flex;align-items:center;justify-content:space-between;padding:12px;margin:8px 0;background:#0a0a0a;border:2px solid #333;border-radius:8px;cursor:pointer;transition:.2s}
+  .amount-option:hover{border-color:#9945ff;background:#1a1a2a}
+  .amount-option.selected{border-color:#9945ff;background:#1a1a2a}
+  .amount-option input[type="radio"]{margin-right:12px}
+  .amount-label{flex:1;text-align:left;font-size:16px;font-weight:600}
+  .amount-bonus{font-size:13px;color:#4ade80;margin-top:4px}
+  .custom-amount{margin-top:16px;padding:12px;background:#0a0a0a;border-radius:8px}
+  .custom-amount input{width:100%;padding:12px;background:#1a1a1a;border:2px solid #333;border-radius:8px;color:#fff;font-size:16px}
+  .custom-amount input:focus{outline:none;border-color:#9945ff}
+  button{background:#9945ff;border:none;border-radius:12px;padding:16px 32px;font-size:18px;color:#fff;cursor:pointer;margin-top:24px;transition:.2s;font-weight:600;box-shadow:0 4px 12px rgba(153,69,255,.3);width:100%}
   button:hover:not(:disabled){background:#7e2fff;transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
   button:disabled{opacity:.6;cursor:not-allowed}
   .info{margin-top:24px;color:#aaa;font-size:14px}
   #debug{margin-top:32px;padding:16px;background:#1a1a1a;border-radius:12px;font-size:12px;color:#888;text-align:left;font-family:'Courier New',monospace;max-height:300px;overflow-y:auto;border:1px solid #333}
   .log-success{color:#4ade80}.log-error{color:#ff6b6b}.log-info{color:#60a5fa}.log-warn{color:#fbbf24}
   .debug-header{color:#60a5fa;margin-bottom:12px;font-weight:600;font-size:13px}
-  .amount-display{font-size:36px;font-weight:700;color:#9945ff;margin:16px 0}
   .detail{color:#999;font-size:13px;margin:4px 0}
+  .helper-text{font-size:12px;color:#888;margin-top:8px}
 </style>
 </head>
 <body>
   <div class="container">
     <h2>💸 SunoLabs Entry Payment</h2>
-    <div class="amount-display">${esc(amount)} SOL</div>
     <p class="detail">${esc(label)}</p>
     <p>${esc(message)}</p>
 
+    <div class="amount-selector">
+      <p style="margin-bottom:16px;font-weight:600;">Choose your entry amount:</p>
+      
+      <label class="amount-option selected" id="option-basic">
+        <input type="radio" name="amount" value="0.01" checked>
+        <div>
+          <div class="amount-label">0.01 SOL - Basic Entry</div>
+          <div class="helper-text">Standard entry with 1x winnings</div>
+        </div>
+      </label>
+
+      <label class="amount-option" id="option-supporter">
+        <input type="radio" name="amount" value="0.05">
+        <div>
+          <div class="amount-label">0.05 SOL - Supporter 💎</div>
+          <div class="amount-bonus">+5% winnings bonus • Supporter badge</div>
+          <div class="helper-text">0.04 SOL donated to treasury</div>
+        </div>
+      </label>
+
+      <label class="amount-option" id="option-patron">
+        <input type="radio" name="amount" value="0.10">
+        <div>
+          <div class="amount-label">0.10 SOL - Patron 👑</div>
+          <div class="amount-bonus">+10% winnings bonus • Patron badge</div>
+          <div class="helper-text">0.09 SOL donated to treasury</div>
+        </div>
+      </label>
+
+      <div class="custom-amount">
+        <label>
+          <div style="margin-bottom:8px;font-size:14px;color:#aaa;">Custom amount (min 0.01):</div>
+          <input type="number" id="customAmount" min="0.01" step="0.01" placeholder="Enter custom SOL amount">
+        </label>
+      </div>
+    </div>
+
     <button id="sendBtn"
       data-recipient="${esc(recipient)}"
-      data-amount="${esc(amount)}"
       data-rpc="${esc(RPC_URL)}"
       data-reference="${esc(reference)}"
       data-userid="${esc(userId)}"
@@ -98,6 +143,35 @@ app.get("/pay", (req, res) => {
     <div id="debug"><div class="debug-header">📋 Debug Console</div></div>
   </div>
 
+  <script>
+    // Amount selection handling
+    document.querySelectorAll('.amount-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.amount-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        opt.querySelector('input').checked = true;
+        document.getElementById('customAmount').value = '';
+      });
+    });
+
+    document.getElementById('customAmount').addEventListener('input', (e) => {
+      if (e.target.value) {
+        document.querySelectorAll('.amount-option').forEach(o => {
+          o.classList.remove('selected');
+          o.querySelector('input').checked = false;
+        });
+      }
+    });
+
+    function getSelectedAmount() {
+      const custom = document.getElementById('customAmount').value;
+      if (custom && parseFloat(custom) >= 0.01) {
+        return parseFloat(custom);
+      }
+      const selected = document.querySelector('input[name="amount"]:checked');
+      return selected ? parseFloat(selected.value) : 0.01;
+    }
+  </script>
   <script type="module" src="/app.js"></script>
   <noscript style="color:#ff6b6b;display:block;margin-top:20px">⚠️ JavaScript is required for this payment page</noscript>
 </body>
@@ -177,11 +251,13 @@ async function sendPayment(){
   
   const {provider,name} = wallet;
   const recipient = btn.dataset.recipient;
-  const amount = parseFloat(btn.dataset.amount || "0.01");
+  const amount = getSelectedAmount(); // Use selected amount
   const rpc = btn.dataset.rpc;
   const reference = btn.dataset.reference;
   const userId = btn.dataset.userid;
   const botUrl = btn.dataset.botUrl;
+
+  log(\`💰 Selected amount: \${amount} SOL\`);
 
   try{
     log(\`🔌 Connecting to \${name}...\`);
@@ -246,7 +322,15 @@ async function sendPayment(){
     
     btn.textContent = "✅ Payment Complete!";
     btn.style.background = "#4ade80";
-    alert(\`✅ Payment sent successfully!\\n\\nYour wallet (\${userPubkey.substring(0,8)}...) will receive winnings if you win!\\n\\nSignature: \${sig.substring(0,8)}...\`);
+    
+    let bonusMsg = "";
+    if (amount >= 0.10) {
+      bonusMsg = "\\n\\n👑 Patron status unlocked! 1.5x winnings if you win!";
+    } else if (amount >= 0.05) {
+      bonusMsg = "\\n\\n💎 Supporter status unlocked! 1.25x winnings if you win!";
+    }
+    
+    alert(\`✅ Payment sent successfully!\\n\\nAmount: \${amount} SOL\\nWallet: \${userPubkey.substring(0,8)}...\\nSignature: \${sig.substring(0,8)}...\${bonusMsg}\`);
     
   }catch(e){
     log("❌ "+(e.message||e),"error");
