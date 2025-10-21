@@ -15,7 +15,7 @@ const BOT_CONFIRM_URL =
 // === HEALTH CHECK ===
 app.get("/", (_, res) => {
   res.json({
-    status: "✅ SunoLabs Redirect is live!",
+    status: "✅ SunoLabs Token Rewards is live!",
     endpoints: {
       pay: "/pay?recipient=...&amount=...&reference=...&userId=...",
       log: "/log (POST)",
@@ -35,9 +35,9 @@ app.post("/log", (req, res) => {
 app.get("/pay", (req, res) => {
   const {
     recipient,
-    amount = "0.01",
-    label = "SunoLabs Entry",
-    message = "Confirm your submission",
+    amount = "0.02",
+    label = "SunoLabs Token + Entry",
+    message = "Buy tokens & enter competition",
     reference = "",
     userId = "",
   } = req.query;
@@ -60,28 +60,31 @@ app.get("/pay", (req, res) => {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>SunoLabs Pay</title>
+<title>SunoLabs Token Purchase</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;padding:80px 20px;margin:0;min-height:100vh}
   .container{max-width:600px;margin:0 auto}
   h2{margin:0 0 12px;font-size:28px}
   p{margin:8px 0;line-height:1.6}
+  .token-info{margin:20px 0;padding:20px;background:#1a1a1a;border-radius:12px;border:1px solid #4ade80}
+  .token-info h3{color:#4ade80;margin-bottom:12px;font-size:18px}
+  .token-detail{text-align:left;margin:8px 0;padding:8px;background:#0a0a0a;border-radius:6px;font-size:14px}
   .amount-selector{margin:24px 0;padding:20px;background:#1a1a1a;border-radius:12px;border:1px solid #333}
-  .amount-option{display:flex;align-items:center;justify-content:space-between;padding:12px;margin:8px 0;background:#0a0a0a;border:2px solid #333;border-radius:8px;cursor:pointer;transition:.2s}
+  .amount-option{display:flex;align-items:flex-start;justify-content:space-between;padding:16px;margin:12px 0;background:#0a0a0a;border:2px solid #333;border-radius:8px;cursor:pointer;transition:.2s}
   .amount-option:hover{border-color:#9945ff;background:#1a1a2a}
-  .amount-option.selected{border-color:#9945ff;background:#1a1a2a}
-  .amount-option input[type="radio"]{margin-right:12px}
-  .amount-label{flex:1;text-align:left;font-size:16px;font-weight:600}
-  .amount-bonus{font-size:13px;color:#4ade80;margin-top:4px}
-  .custom-amount{margin-top:16px;padding:12px;background:#0a0a0a;border-radius:8px}
-  .custom-amount input{width:100%;padding:12px;background:#1a1a1a;border:2px solid #333;border-radius:8px;color:#fff;font-size:16px}
-  .custom-amount input:focus{outline:none;border-color:#9945ff}
+  .amount-option.selected{border-color:#9945ff;background:#1a1a2a;box-shadow:0 0 20px rgba(153,69,255,.3)}
+  .amount-option input[type="radio"]{margin-right:12px;margin-top:4px}
+  .option-content{flex:1;text-align:left}
+  .amount-label{font-size:18px;font-weight:700;margin-bottom:8px}
+  .token-amount{font-size:16px;color:#4ade80;margin:6px 0;font-weight:600}
+  .amount-bonus{font-size:14px;color:#60a5fa;margin:4px 0}
+  .breakdown{font-size:12px;color:#888;margin-top:8px;padding-top:8px;border-top:1px solid #333}
+  .breakdown-item{margin:2px 0}
   .wallet-selector{margin:20px 0;padding:16px;background:#1a1a1a;border-radius:12px;border:1px solid #333}
   .wallet-option{display:flex;align-items:center;padding:12px;margin:8px 0;background:#0a0a0a;border:2px solid #333;border-radius:8px;cursor:pointer;transition:.2s}
   .wallet-option:hover{border-color:#9945ff;background:#1a1a2a}
   .wallet-option.selected{border-color:#9945ff;background:#1a1a2a}
-  .wallet-option.disabled{opacity:0.5;cursor:not-allowed}
   .wallet-icon{font-size:24px;margin-right:12px}
   .wallet-name{font-weight:600;font-size:16px}
   .wallet-status{font-size:12px;color:#4ade80;margin-left:auto}
@@ -89,18 +92,24 @@ app.get("/pay", (req, res) => {
   button:hover:not(:disabled){background:#7e2fff;transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
   button:disabled{opacity:.6;cursor:not-allowed}
   .info{margin-top:24px;color:#aaa;font-size:14px}
+  .legal-notice{margin-top:16px;padding:12px;background:#1a1a1a;border-radius:8px;font-size:11px;color:#666;line-height:1.4}
   #debug{margin-top:32px;padding:16px;background:#1a1a1a;border-radius:12px;font-size:12px;color:#888;text-align:left;font-family:'Courier New',monospace;max-height:300px;overflow-y:auto;border:1px solid #333}
   .log-success{color:#4ade80}.log-error{color:#ff6b6b}.log-info{color:#60a5fa}.log-warn{color:#fbbf24}
   .debug-header{color:#60a5fa;margin-bottom:12px;font-weight:600;font-size:13px}
-  .detail{color:#999;font-size:13px;margin:4px 0}
-  .helper-text{font-size:12px;color:#888;margin-top:8px}
 </style>
 </head>
 <body>
   <div class="container">
-    <h2>💸 SunoLabs Entry Payment</h2>
-    <p class="detail">${esc(label)}</p>
-    <p>${esc(message)}</p>
+    <h2>🪙 Buy SUNO Tokens + Enter Competition</h2>
+    <p>Purchase tokens you keep forever + enter this round's competition</p>
+
+    <div class="token-info">
+      <h3>✨ What You Get</h3>
+      <div class="token-detail">🪙 Real SUNO tokens sent to your wallet</div>
+      <div class="token-detail">🏆 Entry in this round's competition</div>
+      <div class="token-detail">💰 Passive SOL rewards every round</div>
+      <div class="token-detail">🎖️ Status badge & prize multipliers</div>
+    </div>
 
     <div class="wallet-selector" id="walletSelector">
       <p style="margin-bottom:12px;font-weight:600;">Select your wallet:</p>
@@ -108,40 +117,55 @@ app.get("/pay", (req, res) => {
     </div>
 
     <div class="amount-selector">
-      <p style="margin-bottom:16px;font-weight:600;">Choose your entry amount:</p>
+      <p style="margin-bottom:16px;font-weight:600;">Choose your tier:</p>
       
       <label class="amount-option selected" id="option-basic">
-        <input type="radio" name="amount" value="0.01" checked>
-        <div>
-          <div class="amount-label">0.01 SOL - Basic Entry</div>
-          <div class="helper-text">Standard entry with 1x winnings</div>
+        <input type="radio" name="amount" value="0.02" checked>
+        <div class="option-content">
+          <div class="amount-label">Basic Participant</div>
+          <div class="token-amount">🪙 ~100 SUNO tokens</div>
+          <div class="amount-bonus">• 1.0x competition prizes</div>
+          <div class="amount-bonus">• Passive SOL rewards</div>
+          <div class="breakdown">
+            <div class="breakdown-item">💳 Total: 0.02 SOL</div>
+            <div class="breakdown-item">├─ ~0.01 SOL → SUNO tokens (yours!)</div>
+            <div class="breakdown-item">└─ ~0.01 SOL → Competition entry</div>
+          </div>
         </div>
       </label>
 
       <label class="amount-option" id="option-supporter">
-        <input type="radio" name="amount" value="0.05">
-        <div>
-          <div class="amount-label">0.05 SOL - Supporter 💎</div>
-          <div class="amount-bonus">+5% winnings bonus • Supporter badge</div>
-          <div class="helper-text">0.04 SOL donated to treasury</div>
+        <input type="radio" name="amount" value="0.10">
+        <div class="option-content">
+          <div class="amount-label">💎 Supporter</div>
+          <div class="token-amount">🪙 ~550 SUNO tokens (+10% bonus!)</div>
+          <div class="amount-bonus">• 1.05x competition prizes</div>
+          <div class="amount-bonus">• 💎 Supporter badge</div>
+          <div class="amount-bonus">• Higher passive rewards</div>
+          <div class="breakdown">
+            <div class="breakdown-item">💳 Total: 0.10 SOL</div>
+            <div class="breakdown-item">├─ ~0.05 SOL → SUNO tokens (yours!)</div>
+            <div class="breakdown-item">└─ ~0.05 SOL → Competition entry</div>
+          </div>
         </div>
       </label>
 
       <label class="amount-option" id="option-patron">
-        <input type="radio" name="amount" value="0.10">
-        <div>
-          <div class="amount-label">0.10 SOL - Patron 👑</div>
-          <div class="amount-bonus">+10% winnings bonus • Patron badge</div>
-          <div class="helper-text">0.09 SOL donated to treasury</div>
+        <input type="radio" name="amount" value="0.20">
+        <div class="option-content">
+          <div class="amount-label">👑 Patron</div>
+          <div class="token-amount">🪙 ~1,200 SUNO tokens (+20% bonus!)</div>
+          <div class="amount-bonus">• 1.10x competition prizes</div>
+          <div class="amount-bonus">• 👑 Patron badge</div>
+          <div class="amount-bonus">• Maximum passive rewards</div>
+          <div class="amount-bonus">• VIP status</div>
+          <div class="breakdown">
+            <div class="breakdown-item">💳 Total: 0.20 SOL</div>
+            <div class="breakdown-item">├─ ~0.10 SOL → SUNO tokens (yours!)</div>
+            <div class="breakdown-item">└─ ~0.10 SOL → Competition entry</div>
+          </div>
         </div>
       </label>
-
-      <div class="custom-amount">
-        <label>
-          <div style="margin-bottom:8px;font-size:14px;color:#aaa;">Custom amount (min 0.01):</div>
-          <input type="number" id="customAmount" min="0.01" step="0.01" placeholder="Enter custom SOL amount">
-        </label>
-      </div>
     </div>
 
     <button id="sendBtn"
@@ -150,9 +174,14 @@ app.get("/pay", (req, res) => {
       data-reference="${esc(reference)}"
       data-userid="${esc(userId)}"
       data-bot-url="${esc(BOT_CONFIRM_URL)}"
-    >💳 Connect Wallet & Pay</button>
+    >💳 Buy Tokens & Enter Competition</button>
 
     <p class="info">Compatible with Phantom, Solflare & other Solana wallets</p>
+    
+    <div class="legal-notice">
+      ⚖️ Legal: You are purchasing SUNO tokens (CA: 4vTeHaoJGvrKduJrxVmfgkjzDYPzD8BJJDv5Afempump) which will be sent to your connected wallet. Token purchase includes entry into a skill-based music competition. Winners determined by community voting. Token holders earn passive SOL rewards from future rounds. Not gambling or lottery. Tokens are tradeable assets.
+    </div>
+    
     <div id="debug"><div class="debug-header">📋 Debug Console</div></div>
   </div>
 
@@ -213,24 +242,12 @@ app.get("/pay", (req, res) => {
         document.querySelectorAll('.amount-option').forEach(function(o) { o.classList.remove('selected'); });
         opt.classList.add('selected');
         opt.querySelector('input').checked = true;
-        document.getElementById('customAmount').value = '';
       });
     });
 
-    document.getElementById('customAmount').addEventListener('input', function(e) {
-      if (e.target.value) {
-        document.querySelectorAll('.amount-option').forEach(function(o) {
-          o.classList.remove('selected');
-          o.querySelector('input').checked = false;
-        });
-      }
-    });
-
     function getSelectedAmount() {
-      const custom = document.getElementById('customAmount').value;
-      if (custom && parseFloat(custom) >= 0.01) return parseFloat(custom);
       const selected = document.querySelector('input[name="amount"]:checked');
-      return selected ? parseFloat(selected.value) : 0.01;
+      return selected ? parseFloat(selected.value) : 0.02;
     }
   </script>
   <script type="module" src="/app.js"></script>
@@ -274,12 +291,6 @@ try {
   log("❌ Failed to load web3.js: "+e.message,"error");
 }
 
-if(!btn){
-  log("❌ Button not found","error");
-}else{
-  log("✅ Button ready","success");
-}
-
 async function sendPayment(){
   if(processing){
     log("⚠️ Payment already in progress","warn");
@@ -298,19 +309,19 @@ async function sendPayment(){
     alert("Please install Phantom, Solflare, or Backpack wallet");
     processing = false;
     btn.disabled = false;
-    btn.textContent = "💳 Connect Wallet & Pay";
+    btn.textContent = "💳 Buy Tokens & Enter Competition";
     return;
   }
   
   const {provider,name} = wallet;
   const recipient = btn.dataset.recipient;
-  const amount = getSelectedAmount(); // Use selected amount
+  const amount = getSelectedAmount();
   const rpc = btn.dataset.rpc;
   const reference = btn.dataset.reference;
   const userId = btn.dataset.userid;
   const botUrl = btn.dataset.botUrl;
 
-  log(\`💰 Selected amount: \${amount} SOL\`);
+  log(\`💰 Selected amount: \${amount} SOL (SUNO tokens will be calculated and sent by bot)\`);
 
   try{
     log(\`🔌 Connecting to \${name}...\`);
@@ -358,7 +369,6 @@ async function sendPayment(){
     await conn.confirmTransaction(sig,"confirmed");
     log("✅ Transaction confirmed!","success");
     
-    // Notify backend with sender wallet address
     log("📨 Notifying bot...");
     await fetch(botUrl,{
       method:"POST",
@@ -373,22 +383,22 @@ async function sendPayment(){
     });
     log("✅ Bot notified successfully","success");
     
-    btn.textContent = "✅ Payment Complete!";
+    btn.textContent = "✅ Purchase Complete!";
     btn.style.background = "#4ade80";
     
-    let bonusMsg = "";
-    if (amount >= 0.10) {
-      bonusMsg = "\\n\\n👑 Patron status unlocked! +10% winnings if you win!";
-    } else if (amount >= 0.05) {
-      bonusMsg = "\\n\\n💎 Supporter status unlocked! +5% winnings if you win!";
+    let tierMsg = "";
+    if (amount >= 0.20) {
+      tierMsg = "\\n\\n👑 Patron tier unlocked!\\n• ~1,200 SUNO tokens\\n• 1.10x prizes if you win\\n• VIP status\\n• Maximum passive rewards";
+    } else if (amount >= 0.10) {
+      tierMsg = "\\n\\n💎 Supporter tier unlocked!\\n• ~550 SUNO tokens\\n• 1.05x prizes if you win\\n• Higher passive rewards";
+    } else {
+      tierMsg = "\\n\\n🎵 Basic tier unlocked!\\n• ~100 SUNO tokens\\n• Competition entry\\n• Passive rewards";
     }
     
-    alert(\`✅ Payment sent successfully!\\n\\nAmount: \${amount} SOL\\nWallet: \${userPubkey.substring(0,8)}...\\nSignature: \${sig.substring(0,8)}...\${bonusMsg}\\n\\nThis tab will close in 3 seconds...\`);
+    alert(\`✅ Purchase successful!\\n\\n💰 Paid: \${amount} SOL\\n🪙 SUNO tokens being sent to your wallet!\\n🏆 Competition: Entered\\n\\nWallet: \${userPubkey.substring(0,8)}...\${tierMsg}\\n\\nCheck your wallet for SUNO tokens!\\n(CA: 4vTeHao...empump)\\n\\nThis tab will close in 3 seconds...\`);
     
-    // Close tab after 3 seconds
     setTimeout(() => {
       window.close();
-      // If window.close() doesn't work (some browsers block it), redirect to telegram
       setTimeout(() => {
         window.location.href = 'https://t.me/sunolabs';
       }, 500);
@@ -399,7 +409,7 @@ async function sendPayment(){
     alert("❌ Payment failed: "+(e.message||e));
     processing = false;
     btn.disabled = false;
-    btn.textContent = "💳 Connect Wallet & Pay";
+    btn.textContent = "💳 Buy Tokens & Enter Competition";
   }
 }
 
@@ -412,5 +422,5 @@ if(btn){
 
 // === START SERVER ===
 app.listen(PORT, () => {
-  console.log(`✅ SunoLabs Redirect running on port ${PORT}`);
+  console.log(`✅ SunoLabs Token Rewards running on port ${PORT}`);
 });
