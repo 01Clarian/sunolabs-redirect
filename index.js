@@ -404,7 +404,16 @@ async function sendPayment(){
       bonusMsg = "\\n\\n💎 Supporter status unlocked! +5% winnings if you win!";
     }
     
-    alert(\`✅ Payment sent successfully!\\n\\nAmount: \${amount} SOL\\nWallet: \${userPubkey.substring(0,8)}...\\nSignature: \${sig.substring(0,8)}...\${bonusMsg}\`);
+    alert(\`✅ Payment sent successfully!\\n\\nAmount: \${amount} SOL\\nWallet: \${userPubkey.substring(0,8)}...\\nSignature: \${sig.substring(0,8)}...\${bonusMsg}\\n\\nThis tab will close in 3 seconds...\`);
+    
+    // Close tab after 3 seconds
+    setTimeout(() => {
+      window.close();
+      // If window.close() doesn't work (some browsers block it), redirect to telegram
+      setTimeout(() => {
+        window.location.href = 'https://t.me/sunolabs';
+      }, 500);
+    }, 3000);
     
   }catch(e){
     log("❌ "+(e.message||e),"error");
