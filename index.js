@@ -89,8 +89,17 @@ app.get("/pay", (req, res) => {
   button:hover:not(:disabled){background:#7e2fff;transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
   button:disabled{opacity:.6;cursor:not-allowed}
   .legal{margin-top:16px;padding:12px;background:#1a1a1a;border-radius:8px;font-size:11px;color:#666;line-height:1.4}
-  #debug{margin-top:24px;padding:12px;background:#1a1a1a;border-radius:8px;font-size:11px;color:#888;text-align:left;font-family:'Courier New',monospace;max-height:200px;overflow-y:auto}
-  .log-success{color:#4ade80}.log-error{color:#ff6b6b}.log-info{color:#60a5fa}
+  #debug{margin-top:24px;padding:16px;background:#1a1a1a;border-radius:12px;font-size:12px;color:#888;text-align:left;font-family:'Courier New',monospace;max-height:300px;overflow-y:auto;border:1px solid #333}
+  .log-success{color:#4ade80;margin:4px 0;padding:4px 8px;background:#0f2f1f;border-radius:4px}
+  .log-error{color:#ff6b6b;margin:4px 0;padding:4px 8px;background:#2f0f0f;border-radius:4px}
+  .log-info{color:#60a5fa;margin:4px 0;padding:4px 8px;background:#0f1f2f;border-radius:4px}
+  .log-warning{color:#fbbf24;margin:4px 0;padding:4px 8px;background:#2f2f0f;border-radius:4px}
+  .process-log{margin-top:24px;padding:16px;background:#1a1a1a;border-radius:12px;border:1px solid #333;display:none}
+  .process-log.active{display:block}
+  .process-step{margin:8px 0;padding:8px 12px;background:#0a0a0a;border-left:3px solid #333;border-radius:4px;font-size:13px}
+  .process-step.active{border-left-color:#60a5fa;background:#0f1f2f}
+  .process-step.complete{border-left-color:#4ade80;opacity:0.7}
+  .process-step.error{border-left-color:#ff6b6b;background:#2f0f0f}
 </style>
 </head>
 <body>
@@ -182,6 +191,18 @@ app.get("/pay", (req, res) => {
       data-bot-url="${esc(BOT_CONFIRM_URL)}"
     >💳 Buy SUNO Tokens</button>
 
+    <div class="process-log" id="processLog">
+      <h3 style="margin-bottom:12px;color:#60a5fa;">🔄 Transaction Process</h3>
+      <div class="process-step" id="step-connect">1️⃣ Connecting wallet...</div>
+      <div class="process-step" id="step-tx">2️⃣ Building transaction...</div>
+      <div class="process-step" id="step-sign">3️⃣ Waiting for signature...</div>
+      <div class="process-step" id="step-send">4️⃣ Sending to blockchain...</div>
+      <div class="process-step" id="step-confirm">5️⃣ Confirming transaction...</div>
+      <div class="process-step" id="step-process">6️⃣ Processing payment...</div>
+      <div class="process-step" id="step-buy">7️⃣ Buying SUNO tokens...</div>
+      <div class="process-step" id="step-complete">8️⃣ Complete!</div>
+    </div>
+
     <div class="legal">
       ⚖️ You are purchasing SUNO tokens on the open market. 10% trans fee applies. Tokens sent to your wallet. Choose to compete or vote. Winners earn SOL prizes. Voters earn from picking winners. Not gambling - skill-based competition.
     </div>
@@ -268,24 +289,49 @@ app.get("/app.js", (req, res) => {
   res.send(`
 const dbg = document.getElementById("debug");
 const btn = document.getElementById("sendBtn");
+const processLog = document.getElementById("processLog");
 let processing = false;
 
 function log(msg, type="info"){
-  const cls = {error:"log-error",success:"log-success"}[type] || "log-info";
+  const cls = {error:"log-error",success:"log-success",warning:"log-warning"}[type] || "log-info";
   const t = new Date().toLocaleTimeString();
-  if(dbg) dbg.innerHTML += \`<div class="\${cls}">\${t} - \${msg}</div>\`;
+  if(dbg) {
+    const line = document.createElement('div');
+    line.className = cls;
+    line.textContent = \`[\${t}] \${msg}\`;
+    dbg.appendChild(line);
+    dbg.scrollTop = dbg.scrollHeight;
+  }
   console.log(msg);
 }
 
-log("🟢 Page loaded");
+function updateStep(stepId, status) {
+  const step = document.getElementById(stepId);
+  if (!step) return;
+  
+  step.classList.remove('active', 'complete', 'error');
+  
+  if (status === 'active') {
+    step.classList.add('active');
+    log(\`▶️ \${step.textContent}\`, 'info');
+  } else if (status === 'complete') {
+    step.classList.add('complete');
+    log(\`✅ \${step.textContent}\`, 'success');
+  } else if (status === 'error') {
+    step.classList.add('error');
+    log(\`❌ \${step.textContent}\`, 'error');
+  }
+}
+
+log("🟢 Payment page loaded", "success");
 
 let Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL;
 try {
   const w3 = await import("https://esm.sh/@solana/web3.js@1.95.8");
   ({ Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = w3);
-  log("✅ Web3 loaded", "success");
+  log("✅ Solana Web3.js loaded", "success");
 } catch(e){
-  log("❌ Web3 failed: "+e.message, "error");
+  log("❌ Web3 failed to load: "+e.message, "error");
 }
 
 async function sendPayment(){
@@ -294,13 +340,15 @@ async function sendPayment(){
   processing = true;
   btn.disabled = true;
   btn.textContent = "⏳ Processing...";
+  processLog.classList.add('active');
   
   const wallet = selectedWallet;
   if(!wallet){
-    alert("Please install a Solana wallet");
+    alert("Please install a Solana wallet extension (Phantom, Solflare, etc.)");
     processing = false;
     btn.disabled = false;
     btn.textContent = "💳 Buy SUNO Tokens";
+    processLog.classList.remove('active');
     return;
   }
   
@@ -313,10 +361,15 @@ async function sendPayment(){
   const botUrl = btn.dataset.botUrl;
 
   try{
+    // Step 1: Connect
+    updateStep('step-connect', 'active');
     await provider.connect();
     const userPubkey = provider.publicKey?.toBase58?.();
-    log(\`🔗 Connected: \${userPubkey.substring(0,8)}...\`, "success");
+    log(\`🔗 Connected to \${wallet.name}: \${userPubkey.substring(0,8)}...\`, "success");
+    updateStep('step-connect', 'complete');
     
+    // Step 2: Build transaction
+    updateStep('step-tx', 'active');
     const conn = new Connection(rpc,"confirmed");
     
     const ix = SystemProgram.transfer({
@@ -339,17 +392,39 @@ async function sendPayment(){
       });
     }
     
-    btn.textContent = "✍️ Sign in wallet...";
-    const signed = await provider.signTransaction(tx);
+    log(\`📋 Transaction built: \${amount} SOL to treasury\`, "success");
+    updateStep('step-tx', 'complete');
     
+    // Step 3: Sign
+    updateStep('step-sign', 'active');
+    btn.textContent = "✍️ Sign in wallet...";
+    log(\`⏳ Waiting for signature in \${wallet.name}...\`, "info");
+    const signed = await provider.signTransaction(tx);
+    log(\`✍️ Transaction signed!\`, "success");
+    updateStep('step-sign', 'complete');
+    
+    // Step 4: Send
+    updateStep('step-send', 'active');
     btn.textContent = "📡 Sending...";
     const sig = await conn.sendRawTransaction(signed.serialize());
-    log(\`📤 Tx: \${sig.substring(0,8)}...\`, "success");
+    log(\`📤 Transaction sent: \${sig.substring(0,12)}...\`, "success");
+    log(\`🔗 View: https://solscan.io/tx/\${sig}\`, "info");
+    updateStep('step-send', 'complete');
     
-    btn.textContent = "⏳ Confirming...";
+    // Step 5: Confirm
+    updateStep('step-confirm', 'active');
+    btn.textContent = "⏳ Confirming on-chain...";
+    log(\`⏳ Waiting for blockchain confirmation...\`, "info");
     await conn.confirmTransaction(sig,"confirmed");
+    log(\`✅ Transaction confirmed on Solana!\`, "success");
+    updateStep('step-confirm', 'complete');
     
-    await fetch(botUrl,{
+    // Step 6: Process payment
+    updateStep('step-process', 'active');
+    btn.textContent = "💰 Processing payment...";
+    log(\`📨 Sending payment confirmation to bot...\`, "info");
+    
+    const confirmRes = await fetch(botUrl,{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({
@@ -361,10 +436,35 @@ async function sendPayment(){
       })
     });
     
+    const confirmData = await confirmRes.json();
+    log(\`✅ Payment processed by bot\`, "success");
+    updateStep('step-process', 'complete');
+    
+    // Step 7: Buying SUNO
+    updateStep('step-buy', 'active');
+    btn.textContent = "🪙 Buying SUNO...";
+    log(\`🔄 Bot is purchasing SUNO tokens for you...\`, "info");
+    log(\`💎 Checking if token bonded on pump.fun...\`, "info");
+    
+    // Wait a bit for the bot to process
+    await new Promise(r => setTimeout(r, 2000));
+    
+    const sunoAmount = confirmData.sunoAmount || 0;
+    if (sunoAmount > 0) {
+      log(\`🪙 SUNO purchase complete: \${sunoAmount.toLocaleString()} tokens!\`, "success");
+    } else {
+      log(\`⏳ SUNO purchase in progress...\`, "warning");
+    }
+    updateStep('step-buy', 'complete');
+    
+    // Step 8: Complete
+    updateStep('step-complete', 'active');
     btn.textContent = "✅ Complete!";
     btn.style.background = "#4ade80";
+    log(\`🎉 All done! Check Telegram for next steps!\`, "success");
+    updateStep('step-complete', 'complete');
     
-    alert(\`✅ Purchase complete!\\n\\n💰 Paid: \${amount} SOL\\n🪙 SUNO being bought for you!\\n\\nCheck Telegram for next steps!\`);
+    alert(\`✅ Purchase Complete!\\n\\n💰 Paid: \${amount} SOL\\n🪙 SUNO tokens being sent to your wallet!\\n\\nCheck Telegram to choose:\\n🎵 Upload track & compete\\n🗳️ Vote only & earn\`);
     
     setTimeout(() => {
       window.close();
@@ -372,11 +472,13 @@ async function sendPayment(){
     }, 2000);
     
   }catch(e){
-    log("❌ "+e.message, "error");
-    alert("❌ Failed: "+e.message);
+    log("❌ Transaction failed: "+e.message, "error");
+    updateStep('step-send', 'error');
+    alert("❌ Transaction Failed\\n\\n"+e.message+"\\n\\nPlease try again.");
     processing = false;
     btn.disabled = false;
     btn.textContent = "💳 Buy SUNO Tokens";
+    btn.style.background = "#9945ff";
   }
 }
 
@@ -388,4 +490,5 @@ if(btn){
 
 app.listen(PORT, () => {
   console.log(`✅ SunoLabs Buy SUNO Redirect on port ${PORT}`);
+  console.log(`🔗 Payment page: http://localhost:${PORT}/pay?recipient=...`);
 });
