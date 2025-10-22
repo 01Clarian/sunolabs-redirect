@@ -215,10 +215,39 @@ app.get("/pay", (req, res) => {
 
     function detectWallets() {
       const wallets = [];
-      if (window.phantom?.solana?.isPhantom) wallets.push({ name: 'Phantom', icon: '👻', provider: window.phantom.solana });
-      if (window.solflare?.isSolflare) wallets.push({ name: 'Solflare', icon: '🔆', provider: window.solflare });
-      if (window.backpack?.isBackpack) wallets.push({ name: 'Backpack', icon: '🎒', provider: window.backpack });
-      if (window.okxwallet?.solana) wallets.push({ name: 'OKX Wallet', icon: '⭕', provider: window.okxwallet.solana });
+      
+      // Phantom detection
+      if (window.phantom?.solana?.isPhantom) {
+        wallets.push({ name: 'Phantom', icon: '👻', provider: window.phantom.solana });
+      }
+      
+      // Solflare detection - improved for better compatibility
+      if (window.solflare) {
+        // Try multiple detection methods for Solflare
+        const isSolflare = window.solflare.isSolflare || 
+                          window.solflare.constructor?.name === 'Solflare' ||
+                          (window.solflare.isConnected !== undefined);
+        
+        if (isSolflare) {
+          wallets.push({ name: 'Solflare', icon: '🔆', provider: window.solflare });
+        }
+      }
+      
+      // Backpack detection
+      if (window.backpack?.isBackpack) {
+        wallets.push({ name: 'Backpack', icon: '🎒', provider: window.backpack });
+      }
+      
+      // OKX Wallet detection
+      if (window.okxwallet?.solana) {
+        wallets.push({ name: 'OKX Wallet', icon: '⭕', provider: window.okxwallet.solana });
+      }
+      
+      // Trust Wallet detection
+      if (window.trustwallet?.solana) {
+        wallets.push({ name: 'Trust Wallet', icon: '🛡️', provider: window.trustwallet.solana });
+      }
+      
       return wallets;
     }
 
@@ -226,7 +255,7 @@ app.get("/pay", (req, res) => {
       const wallets = detectWallets();
       const container = document.getElementById('walletOptions');
       if (!wallets.length) {
-        container.innerHTML = '<p style="color:#ff6b6b;">No wallets detected</p>';
+        container.innerHTML = '<p style="color:#ff6b6b;">No Solana wallets detected. Please install Phantom, Solflare, or another Solana wallet.</p>';
         return;
       }
 
@@ -276,7 +305,11 @@ app.get("/pay", (req, res) => {
       document.getElementById('whaleSUNO').textContent = 'SUNO value: ~' + sunoValue.toFixed(4) + ' SOL';
     }
 
+    // Initial render
     renderWalletOptions();
+    
+    // Re-check for wallets after a short delay (in case extensions load slowly)
+    setTimeout(renderWalletOptions, 500);
   </script>
   <script type="module" src="/app.js"></script>
 </body>
