@@ -2,21 +2,55 @@ import express from "express";
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(express.json({ limit: '10kb' })); // Limit request size
+app.use(express.json({ limit: '10kb' }));
 
 const RPC_URL = process.env.SOLANA_RPC_URL;
 if (!RPC_URL) {
   throw new Error("❌ SOLANA_RPC_URL environment variable required!");
 }
 
-const BOT_CONFIRM_URL =
-  process.env.BOT_CONFIRM_URL || "https://sunolabs-bot.onrender.com/confirm-payment";
+// ========================================
+// 🎯 BOT CONFIGURATIONS
+// ========================================
+const BOT_CONFIGS = {
+  sunolabs: {
+    name: "SunoLabs",
+    displayName: "SUNO LABS",
+    token: "SUNO",
+    primaryColor: "#9945ff",
+    secondaryColor: "#4ade80",
+    botUrl: process.env.SUNOLABS_BOT_URL || "https://sunolabs-bot.onrender.com/confirm-payment",
+    icon: "🎵",
+    description: "Music Competition"
+  },
+  xposure: {
+    name: "Xposure",
+    displayName: "XPOSURE",
+    token: "XPOSURE",
+    primaryColor: "#ff6b6b",
+    secondaryColor: "#ffd93d",
+    botUrl: process.env.XPOSURE_BOT_URL || "https://xposure-bot.onrender.com/confirm-payment",
+    icon: "🎤",
+    description: "Music Competition"
+  },
+  gofundme: {
+    name: "GoFundMe Go",
+    displayName: "GOFUNDME GO",
+    token: "GO",
+    primaryColor: "#4ade80",
+    secondaryColor: "#60a5fa",
+    botUrl: process.env.GOFUNDME_BOT_URL || "https://gofundme-bot.onrender.com/confirm-payment",
+    icon: "💰",
+    description: "Funding Competition"
+  }
+};
 
 app.get("/", (_, res) => {
   res.json({
-    status: "✅ SunoLabs Buy SUNO is live!",
+    status: "✅ Shared Competition Payment Service",
+    bots: Object.keys(BOT_CONFIGS),
     endpoints: {
-      pay: "/pay?recipient=...&amount=...&reference=...&userId=...",
+      pay: "/pay?bot=sunolabs&recipient=...&amount=...&reference=...&userId=...",
     },
     uptime: process.uptime(),
   });
@@ -30,6 +64,7 @@ app.post("/log", (req, res) => {
 
 app.get("/pay", (req, res) => {
   const {
+    bot = "sunolabs",  // Default to sunolabs if not specified
     recipient,
     amount = "0.01",
     reference = "",
@@ -39,6 +74,10 @@ app.get("/pay", (req, res) => {
   if (!recipient) {
     return res.status(400).send("❌ Missing recipient address");
   }
+
+  // Get config for this bot
+  const config = BOT_CONFIGS[bot] || BOT_CONFIGS.sunolabs;
+  const botUrl = config.botUrl;
 
   const esc = (s = "") =>
     String(s)
@@ -54,40 +93,44 @@ app.get("/pay", (req, res) => {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Buy SUNO Tokens</title>
+<title>Buy ${config.token} Tokens - ${config.name}</title>
 <style>
+  :root {
+    --primary-color: ${config.primaryColor};
+    --secondary-color: ${config.secondaryColor};
+  }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;padding:60px 20px;margin:0;min-height:100vh}
   .container{max-width:700px;margin:0 auto}
   h2{margin:0 0 8px;font-size:32px}
   .subtitle{color:#888;margin-bottom:24px;font-size:16px}
-  .info-box{margin:20px 0;padding:20px;background:#1a1a1a;border-radius:12px;border:1px solid #4ade80}
-  .info-box h3{color:#4ade80;margin-bottom:12px;font-size:18px}
+  .info-box{margin:20px 0;padding:20px;background:#1a1a1a;border-radius:12px;border:1px solid var(--secondary-color)}
+  .info-box h3{color:var(--secondary-color);margin-bottom:12px;font-size:18px}
   .info-item{text-align:left;margin:8px 0;padding:8px;background:#0a0a0a;border-radius:6px;font-size:14px}
   .wallet-selector{margin:20px 0;padding:16px;background:#1a1a1a;border-radius:12px;border:1px solid #333}
   .wallet-option{display:flex;align-items:center;padding:12px;margin:8px 0;background:#0a0a0a;border:2px solid #333;border-radius:8px;cursor:pointer;transition:.2s}
-  .wallet-option:hover{border-color:#9945ff;background:#1a1a2a}
-  .wallet-option.selected{border-color:#9945ff;background:#1a1a2a}
+  .wallet-option:hover{border-color:var(--primary-color);background:#1a1a2a}
+  .wallet-option.selected{border-color:var(--primary-color);background:#1a1a2a}
   .wallet-icon{font-size:24px;margin-right:12px}
   .wallet-name{font-weight:600;font-size:16px}
-  .wallet-status{font-size:12px;color:#4ade80;margin-left:auto}
+  .wallet-status{font-size:12px;color:var(--secondary-color);margin-left:auto}
   .tier-selector{margin:24px 0}
   .tier-option{padding:20px;margin:12px 0;background:#1a1a1a;border:2px solid #333;border-radius:12px;cursor:pointer;transition:.2s}
-  .tier-option:hover{border-color:#9945ff;background:#1a1a2a}
-  .tier-option.selected{border-color:#9945ff;background:#1a1a2a;box-shadow:0 0 20px rgba(153,69,255,.3)}
+  .tier-option:hover{border-color:var(--primary-color);background:#1a1a2a}
+  .tier-option.selected{border-color:var(--primary-color);background:#1a1a2a;box-shadow:0 0 20px rgba(153,69,255,.3)}
   .tier-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .tier-name{font-size:20px;font-weight:700}
   .tier-badge{font-size:24px}
-  .tier-amount{font-size:18px;color:#4ade80;margin:8px 0;font-weight:600}
+  .tier-amount{font-size:18px;color:var(--secondary-color);margin:8px 0;font-weight:600}
   .tier-details{font-size:14px;color:#aaa;margin:4px 0}
   .tier-breakdown{margin-top:12px;padding-top:12px;border-top:1px solid #333;font-size:13px;color:#666}
   .tier-breakdown-item{margin:4px 0}
   .whale-input{margin-top:16px;padding:16px;background:#0a0a0a;border-radius:8px}
   .whale-input input{width:100%;padding:12px;background:#1a1a1a;border:2px solid #333;border-radius:8px;color:#fff;font-size:18px}
-  .whale-input input:focus{outline:none;border-color:#9945ff}
+  .whale-input input:focus{outline:none;border-color:var(--primary-color)}
   .whale-calc{margin-top:12px;padding:12px;background:#1a1a2a;border-radius:6px;font-size:14px}
-  button{background:#9945ff;border:none;border-radius:12px;padding:18px 36px;font-size:20px;color:#fff;cursor:pointer;margin-top:28px;transition:.2s;font-weight:700;box-shadow:0 4px 12px rgba(153,69,255,.3);width:100%}
-  button:hover:not(:disabled){background:#7e2fff;transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
+  button{background:var(--primary-color);border:none;border-radius:12px;padding:18px 36px;font-size:20px;color:#fff;cursor:pointer;margin-top:28px;transition:.2s;font-weight:700;box-shadow:0 4px 12px rgba(153,69,255,.3);width:100%}
+  button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
   button:disabled{opacity:.6;cursor:not-allowed}
   .legal{margin-top:16px;padding:12px;background:#1a1a1a;border-radius:8px;font-size:11px;color:#666;line-height:1.4}
   #debug{margin-top:24px;padding:16px;background:#1a1a1a;border-radius:12px;font-size:12px;color:#888;text-align:left;font-family:'Courier New',monospace;max-height:300px;overflow-y:auto;border:1px solid #333}
@@ -105,15 +148,15 @@ app.get("/pay", (req, res) => {
 </head>
 <body>
   <div class="container">
-    <h2>🪙 Buy SUNO Tokens</h2>
-    <p class="subtitle">Purchase SUNO + Enter Competition</p>
+    <h2>${config.icon} Buy ${config.token} Tokens</h2>
+    <p class="subtitle">${config.name} - ${config.description}</p>
 
     <div class="info-box">
       <h3>💰 How It Works</h3>
-      <div class="info-item">1. Pay SOL → We buy SUNO for you on market</div>
-      <div class="info-item">2. You receive SUNO tokens in your wallet</div>
+      <div class="info-item">1. Pay SOL → We buy ${config.token} for you on market</div>
+      <div class="info-item">2. You receive ${config.token} tokens in your wallet</div>
       <div class="info-item">3. Compete for prizes or vote & earn!</div>
-      <div class="info-item">4. Win SUNO rewards! 🏆</div>
+      <div class="info-item">4. Win ${config.token} rewards! 🏆</div>
     </div>
 
     <div class="wallet-selector">
@@ -148,8 +191,8 @@ app.get("/pay", (req, res) => {
         <div class="tier-details">• 50% retention awards • 1.0x prizes</div>
         <div class="tier-breakdown">
           <div class="tier-breakdown-item">Trans fee: 0.001 SOL (10%)</div>
-          <div class="tier-breakdown-item">You get: ~0.0045 SOL in SUNO</div>
-          <div class="tier-breakdown-item">Competition: 0.0045 SOL in SUNO</div>
+          <div class="tier-breakdown-item">You get: ~0.0045 SOL in ${config.token}</div>
+          <div class="tier-breakdown-item">Competition: 0.0045 SOL in ${config.token}</div>
         </div>
       </div>
 
@@ -162,8 +205,8 @@ app.get("/pay", (req, res) => {
         <div class="tier-details">• 55% retention awards (+5% bonus!) • 1.05x prizes</div>
         <div class="tier-breakdown">
           <div class="tier-breakdown-item">Trans fee: 0.005 SOL (10%)</div>
-          <div class="tier-breakdown-item">You get: ~0.02475 SOL in SUNO</div>
-          <div class="tier-breakdown-item">Competition: 0.02025 SOL in SUNO</div>
+          <div class="tier-breakdown-item">You get: ~0.02475 SOL in ${config.token}</div>
+          <div class="tier-breakdown-item">Competition: 0.02025 SOL in ${config.token}</div>
         </div>
       </div>
 
@@ -176,8 +219,8 @@ app.get("/pay", (req, res) => {
         <div class="tier-details">• 60% retention awards (+10% bonus!) • 1.10x prizes</div>
         <div class="tier-breakdown">
           <div class="tier-breakdown-item">Trans fee: 0.01 SOL (10%)</div>
-          <div class="tier-breakdown-item">You get: ~0.054 SOL in SUNO</div>
-          <div class="tier-breakdown-item">Competition: 0.036 SOL in SUNO</div>
+          <div class="tier-breakdown-item">You get: ~0.054 SOL in ${config.token}</div>
+          <div class="tier-breakdown-item">Competition: 0.036 SOL in ${config.token}</div>
         </div>
       </div>
     </div>
@@ -187,8 +230,9 @@ app.get("/pay", (req, res) => {
       data-rpc="${esc(RPC_URL)}"
       data-reference="${esc(reference)}"
       data-userid="${esc(userId)}"
-      data-bot-url="${esc(BOT_CONFIRM_URL)}"
-    >💳 Buy SUNO Tokens</button>
+      data-bot-url="${esc(botUrl)}"
+      data-token-name="${esc(config.token)}"
+    >💳 Buy ${config.token} Tokens</button>
 
     <div class="process-log" id="processLog">
       <h3 style="margin-bottom:12px;color:#60a5fa;">🔄 Transaction Process</h3>
@@ -198,12 +242,12 @@ app.get("/pay", (req, res) => {
       <div class="process-step" id="step-send">4️⃣ Sending to blockchain...</div>
       <div class="process-step" id="step-confirm">5️⃣ Confirming transaction...</div>
       <div class="process-step" id="step-process">6️⃣ Processing payment...</div>
-      <div class="process-step" id="step-buy">7️⃣ Buying SUNO tokens...</div>
+      <div class="process-step" id="step-buy">7️⃣ Buying ${config.token} tokens...</div>
       <div class="process-step" id="step-complete">8️⃣ Complete!</div>
     </div>
 
     <div class="legal">
-      ⚖️ You are purchasing SUNO tokens on the open market. 10% trans fee applies. Tokens sent to your wallet. Choose to compete or vote. Winners earn SUNO prizes. Voters earn from picking winners. Not gambling - skill-based competition.
+      ⚖️ You are purchasing ${config.token} tokens on the open market. 10% trans fee applies. Tokens sent to your wallet. Choose to compete or vote. Winners earn ${config.token} prizes. Voters earn from picking winners. Not gambling - skill-based competition.
     </div>
 
     <div id="debug"></div>
@@ -223,7 +267,6 @@ app.get("/pay", (req, res) => {
       
       // Solflare detection - improved for better compatibility
       if (window.solflare) {
-        // Try multiple detection methods for Solflare
         const isSolflare = window.solflare.isSolflare || 
                           window.solflare.constructor?.name === 'Solflare' ||
                           (window.solflare.isConnected !== undefined);
@@ -302,7 +345,7 @@ app.get("/pay", (req, res) => {
       document.getElementById('whaleCalc').style.display = 'block';
       document.getElementById('whaleRetention').textContent = 'Retention awards: ' + (retention * 100).toFixed(0) + '%';
       document.getElementById('whaleMultiplier').textContent = 'Prize multiplier: ' + multiplier.toFixed(2) + 'x';
-      document.getElementById('whaleSUNO').textContent = 'SUNO value: ~' + sunoValue.toFixed(4) + ' SOL';
+      document.getElementById('whaleSUNO').textContent = 'Token value: ~' + sunoValue.toFixed(4) + ' SOL';
     }
 
     // Initial render
@@ -383,7 +426,7 @@ async function sendPayment(){
     alert("Please install a Solana wallet extension (Phantom, Solflare, etc.)");
     processing = false;
     btn.disabled = false;
-    btn.textContent = "💳 Buy SUNO Tokens";
+    btn.textContent = "💳 Buy Tokens";
     processLog.classList.remove('active');
     return;
   }
@@ -395,6 +438,7 @@ async function sendPayment(){
   const reference = btn.dataset.reference;
   const userId = btn.dataset.userid;
   const botUrl = btn.dataset.botUrl;
+  const tokenName = btn.dataset.tokenName;
 
   try{
     // Step 1: Connect
@@ -476,20 +520,19 @@ async function sendPayment(){
     log(\`✅ Payment processed by bot\`, "success");
     updateStep('step-process', 'complete');
     
-    // Step 7: Buying SUNO
+    // Step 7: Buying tokens
     updateStep('step-buy', 'active');
-    btn.textContent = "🪙 Buying SUNO...";
-    log(\`🔄 Bot is purchasing SUNO tokens for you...\`, "info");
-    log(\`💎 Checking if token bonded on pump.fun...\`, "info");
+    btn.textContent = "🪙 Buying " + tokenName + "...";
+    log(\`🔄 Bot is purchasing \${tokenName} tokens for you...\`, "info");
     
     // Wait a bit for the bot to process
     await new Promise(r => setTimeout(r, 2000));
     
     const sunoAmount = confirmData.sunoAmount || 0;
     if (sunoAmount > 0) {
-      log(\`🪙 SUNO purchase complete: \${sunoAmount.toLocaleString()} tokens!\`, "success");
+      log(\`🪙 \${tokenName} purchase complete: \${sunoAmount.toLocaleString()} tokens!\`, "success");
     } else {
-      log(\`⏳ SUNO purchase in progress...\`, "warning");
+      log(\`⏳ \${tokenName} purchase in progress...\`, "warning");
     }
     updateStep('step-buy', 'complete');
     
@@ -500,11 +543,10 @@ async function sendPayment(){
     log(\`🎉 All done! Check Telegram for confirmation!\`, "success");
     updateStep('step-complete', 'complete');
     
-    alert(\`✅ Purchase Complete!\\n\\n💰 Paid: \${amount} SOL\\n🪙 SUNO tokens sent to your wallet!\\n\\nCheck Telegram for your entry confirmation!\`);
+    alert(\`✅ Purchase Complete!\\n\\n💰 Paid: \${amount} SOL\\n🪙 \${tokenName} tokens sent to your wallet!\\n\\nCheck Telegram for your entry confirmation!\`);
     
     setTimeout(() => {
       window.close();
-      setTimeout(() => window.location.href = 'https://t.me/sunolabs', 500);
     }, 2000);
     
   }catch(e){
@@ -525,8 +567,8 @@ async function sendPayment(){
     alert("❌ Transaction Failed\\n\\n"+e.message+"\\n\\nPlease try again or check your wallet has enough SOL for fees.");
     processing = false;
     btn.disabled = false;
-    btn.textContent = "💳 Buy SUNO Tokens";
-    btn.style.background = "#9945ff";
+    btn.textContent = "💳 Buy Tokens";
+    btn.style.background = "var(--primary-color)";
   }
 }
 
@@ -537,6 +579,7 @@ if(btn){
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ SunoLabs Buy SUNO Redirect on port ${PORT}`);
-  console.log(`🔗 Payment page: http://localhost:${PORT}/pay?recipient=...`);
+  console.log(`✅ Shared Competition Payment Service on port ${PORT}`);
+  console.log(`🎯 Serving: ${Object.keys(BOT_CONFIGS).join(', ')}`);
+  console.log(`🔗 Payment page: http://localhost:${PORT}/pay?bot=sunolabs&recipient=...`);
 });
