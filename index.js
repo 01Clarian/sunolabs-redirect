@@ -10,7 +10,7 @@ if (!RPC_URL) {
 }
 
 // ========================================
-// 🎯 BOT CONFIGURATIONS
+// 🎯 BOT CONFIGURATIONS - ADD YOUR BOTS HERE
 // ========================================
 const BOT_CONFIGS = {
   sunolabs: {
@@ -21,7 +21,8 @@ const BOT_CONFIGS = {
     secondaryColor: "#4ade80",
     botUrl: process.env.SUNOLABS_BOT_URL || "https://sunolabs-bot.onrender.com/confirm-payment",
     icon: "🎵",
-    description: "Music Competition"
+    description: "Music Competition",
+    telegram: "sunolabs"
   },
   xposure: {
     name: "Xposure",
@@ -31,7 +32,8 @@ const BOT_CONFIGS = {
     secondaryColor: "#ffd93d",
     botUrl: process.env.XPOSURE_BOT_URL || "https://xposure-bot.onrender.com/confirm-payment",
     icon: "🎤",
-    description: "Music Competition"
+    description: "Music Competition",
+    telegram: "xposure"
   },
   gofundme: {
     name: "GoFundMe Go",
@@ -41,7 +43,8 @@ const BOT_CONFIGS = {
     secondaryColor: "#60a5fa",
     botUrl: process.env.GOFUNDME_BOT_URL || "https://gofundme-bot.onrender.com/confirm-payment",
     icon: "💰",
-    description: "Funding Competition"
+    description: "Funding Competition",
+    telegram: "gofundme_go"
   }
 };
 
@@ -64,7 +67,7 @@ app.post("/log", (req, res) => {
 
 app.get("/pay", (req, res) => {
   const {
-    bot = "sunolabs",  // Default to sunolabs if not specified
+    bot = "sunolabs",
     recipient,
     amount = "0.01",
     reference = "",
@@ -75,9 +78,9 @@ app.get("/pay", (req, res) => {
     return res.status(400).send("❌ Missing recipient address");
   }
 
-  // Get config for this bot
+  // Get config for the requested bot
   const config = BOT_CONFIGS[bot] || BOT_CONFIGS.sunolabs;
-  const botUrl = config.botUrl;
+  const BOT_CONFIRM_URL = config.botUrl;
 
   const esc = (s = "") =>
     String(s)
@@ -93,44 +96,40 @@ app.get("/pay", (req, res) => {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Buy ${config.token} Tokens - ${config.name}</title>
+<title>Buy ${config.token} Tokens</title>
 <style>
-  :root {
-    --primary-color: ${config.primaryColor};
-    --secondary-color: ${config.secondaryColor};
-  }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:#0a0a0a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;text-align:center;padding:60px 20px;margin:0;min-height:100vh}
   .container{max-width:700px;margin:0 auto}
   h2{margin:0 0 8px;font-size:32px}
   .subtitle{color:#888;margin-bottom:24px;font-size:16px}
-  .info-box{margin:20px 0;padding:20px;background:#1a1a1a;border-radius:12px;border:1px solid var(--secondary-color)}
-  .info-box h3{color:var(--secondary-color);margin-bottom:12px;font-size:18px}
+  .info-box{margin:20px 0;padding:20px;background:#1a1a1a;border-radius:12px;border:1px solid ${config.secondaryColor}}
+  .info-box h3{color:${config.secondaryColor};margin-bottom:12px;font-size:18px}
   .info-item{text-align:left;margin:8px 0;padding:8px;background:#0a0a0a;border-radius:6px;font-size:14px}
   .wallet-selector{margin:20px 0;padding:16px;background:#1a1a1a;border-radius:12px;border:1px solid #333}
   .wallet-option{display:flex;align-items:center;padding:12px;margin:8px 0;background:#0a0a0a;border:2px solid #333;border-radius:8px;cursor:pointer;transition:.2s}
-  .wallet-option:hover{border-color:var(--primary-color);background:#1a1a2a}
-  .wallet-option.selected{border-color:var(--primary-color);background:#1a1a2a}
+  .wallet-option:hover{border-color:${config.primaryColor};background:#1a1a2a}
+  .wallet-option.selected{border-color:${config.primaryColor};background:#1a1a2a}
   .wallet-icon{font-size:24px;margin-right:12px}
   .wallet-name{font-weight:600;font-size:16px}
-  .wallet-status{font-size:12px;color:var(--secondary-color);margin-left:auto}
+  .wallet-status{font-size:12px;color:${config.secondaryColor};margin-left:auto}
   .tier-selector{margin:24px 0}
   .tier-option{padding:20px;margin:12px 0;background:#1a1a1a;border:2px solid #333;border-radius:12px;cursor:pointer;transition:.2s}
-  .tier-option:hover{border-color:var(--primary-color);background:#1a1a2a}
-  .tier-option.selected{border-color:var(--primary-color);background:#1a1a2a;box-shadow:0 0 20px rgba(153,69,255,.3)}
+  .tier-option:hover{border-color:${config.primaryColor};background:#1a1a2a}
+  .tier-option.selected{border-color:${config.primaryColor};background:#1a1a2a;box-shadow:0 0 20px rgba(153,69,255,.3)}
   .tier-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .tier-name{font-size:20px;font-weight:700}
   .tier-badge{font-size:24px}
-  .tier-amount{font-size:18px;color:var(--secondary-color);margin:8px 0;font-weight:600}
+  .tier-amount{font-size:18px;color:${config.secondaryColor};margin:8px 0;font-weight:600}
   .tier-details{font-size:14px;color:#aaa;margin:4px 0}
   .tier-breakdown{margin-top:12px;padding-top:12px;border-top:1px solid #333;font-size:13px;color:#666}
   .tier-breakdown-item{margin:4px 0}
   .whale-input{margin-top:16px;padding:16px;background:#0a0a0a;border-radius:8px}
   .whale-input input{width:100%;padding:12px;background:#1a1a1a;border:2px solid #333;border-radius:8px;color:#fff;font-size:18px}
-  .whale-input input:focus{outline:none;border-color:var(--primary-color)}
+  .whale-input input:focus{outline:none;border-color:${config.primaryColor}}
   .whale-calc{margin-top:12px;padding:12px;background:#1a1a2a;border-radius:6px;font-size:14px}
-  button{background:var(--primary-color);border:none;border-radius:12px;padding:18px 36px;font-size:20px;color:#fff;cursor:pointer;margin-top:28px;transition:.2s;font-weight:700;box-shadow:0 4px 12px rgba(153,69,255,.3);width:100%}
-  button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
+  button{background:${config.primaryColor};border:none;border-radius:12px;padding:18px 36px;font-size:20px;color:#fff;cursor:pointer;margin-top:28px;transition:.2s;font-weight:700;box-shadow:0 4px 12px rgba(153,69,255,.3);width:100%}
+  button:hover:not(:disabled){background:#7e2fff;transform:translateY(-2px);box-shadow:0 6px 16px rgba(153,69,255,.4)}
   button:disabled{opacity:.6;cursor:not-allowed}
   .legal{margin-top:16px;padding:12px;background:#1a1a1a;border-radius:8px;font-size:11px;color:#666;line-height:1.4}
   #debug{margin-top:24px;padding:16px;background:#1a1a1a;border-radius:12px;font-size:12px;color:#888;text-align:left;font-family:'Courier New',monospace;max-height:300px;overflow-y:auto;border:1px solid #333}
@@ -149,7 +148,7 @@ app.get("/pay", (req, res) => {
 <body>
   <div class="container">
     <h2>${config.icon} Buy ${config.token} Tokens</h2>
-    <p class="subtitle">${config.name} - ${config.description}</p>
+    <p class="subtitle">Purchase ${config.token} + Enter Competition</p>
 
     <div class="info-box">
       <h3>💰 How It Works</h3>
@@ -230,7 +229,7 @@ app.get("/pay", (req, res) => {
       data-rpc="${esc(RPC_URL)}"
       data-reference="${esc(reference)}"
       data-userid="${esc(userId)}"
-      data-bot-url="${esc(botUrl)}"
+      data-bot-url="${esc(BOT_CONFIRM_URL)}"
       data-token-name="${esc(config.token)}"
     >💳 Buy ${config.token} Tokens</button>
 
@@ -267,6 +266,7 @@ app.get("/pay", (req, res) => {
       
       // Solflare detection - improved for better compatibility
       if (window.solflare) {
+        // Try multiple detection methods for Solflare
         const isSolflare = window.solflare.isSolflare || 
                           window.solflare.constructor?.name === 'Solflare' ||
                           (window.solflare.isConnected !== undefined);
@@ -345,7 +345,7 @@ app.get("/pay", (req, res) => {
       document.getElementById('whaleCalc').style.display = 'block';
       document.getElementById('whaleRetention').textContent = 'Retention awards: ' + (retention * 100).toFixed(0) + '%';
       document.getElementById('whaleMultiplier').textContent = 'Prize multiplier: ' + multiplier.toFixed(2) + 'x';
-      document.getElementById('whaleSUNO').textContent = 'Token value: ~' + sunoValue.toFixed(4) + ' SOL';
+      document.getElementById('whaleSUNO').textContent = '${config.token} value: ~' + sunoValue.toFixed(4) + ' SOL';
     }
 
     // Initial render
@@ -426,7 +426,8 @@ async function sendPayment(){
     alert("Please install a Solana wallet extension (Phantom, Solflare, etc.)");
     processing = false;
     btn.disabled = false;
-    btn.textContent = "💳 Buy Tokens";
+    const tokenName = btn.dataset.tokenName || "Tokens";
+    btn.textContent = "💳 Buy " + tokenName;
     processLog.classList.remove('active');
     return;
   }
@@ -438,7 +439,7 @@ async function sendPayment(){
   const reference = btn.dataset.reference;
   const userId = btn.dataset.userid;
   const botUrl = btn.dataset.botUrl;
-  const tokenName = btn.dataset.tokenName;
+  const tokenName = btn.dataset.tokenName || "SUNO";
 
   try{
     // Step 1: Connect
@@ -524,6 +525,7 @@ async function sendPayment(){
     updateStep('step-buy', 'active');
     btn.textContent = "🪙 Buying " + tokenName + "...";
     log(\`🔄 Bot is purchasing \${tokenName} tokens for you...\`, "info");
+    log(\`💎 Checking if token bonded on pump.fun...\`, "info");
     
     // Wait a bit for the bot to process
     await new Promise(r => setTimeout(r, 2000));
@@ -547,6 +549,7 @@ async function sendPayment(){
     
     setTimeout(() => {
       window.close();
+      setTimeout(() => window.location.href = 'https://t.me/sunolabs', 500);
     }, 2000);
     
   }catch(e){
@@ -564,11 +567,12 @@ async function sendPayment(){
       updateStep('step-confirm', 'error');
     }
     
+    const tokenName = btn.dataset.tokenName || "SUNO";
     alert("❌ Transaction Failed\\n\\n"+e.message+"\\n\\nPlease try again or check your wallet has enough SOL for fees.");
     processing = false;
     btn.disabled = false;
-    btn.textContent = "💳 Buy Tokens";
-    btn.style.background = "var(--primary-color)";
+    btn.textContent = "💳 Buy " + tokenName + " Tokens";
+    btn.style.background = "#9945ff";
   }
 }
 
