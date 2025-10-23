@@ -36,12 +36,12 @@ const BOT_CONFIGS = {
     telegram: "xposure"
   },
   gofundme: {
-    name: "GoFundMe Go",
-    displayName: "GOFUNDME GO",
-    token: "GO",
+    name: "GoFundMe",
+    displayName: "GOFUNDME",
+    token: "FUND",
     primaryColor: "#4ade80",
     secondaryColor: "#60a5fa",
-    botUrl: process.env.GOFUNDME_BOT_URL || "https://gofundme-bot.onrender.com/confirm-payment",
+    botUrl: process.env.GOFUNDME_BOT_URL || "https://gofundme-o0cn.onrender.com/confirm-payment",
     icon: "💰",
     description: "Funding Competition",
     telegram: "gofundme_go"
